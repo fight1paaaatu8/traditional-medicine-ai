@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Traditional Medicine.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+  <style>
+    :root {
+      --bg-lapis: #235B93;
+      --bg-lapis-deep: #1B4A79;
+      --bg-surface: #2865A2;
+      --bg-surface-alt: #1E5082;
+      --border-subtle: rgba(255, 255, 255, 0.22);
+      --border-strong: rgba(255, 255, 255, 0.42);
+      --text-white: #FFFFFF;
+      --text-soft: rgba(255, 255, 255, 0.88);
+      --text-muted: rgba(255, 255, 255, 0.68);
+      --accent-sky: #93C5FD;
+      --accent-mint: #6EE7B7;
+      --radius-xl: 20px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: "Plus Jakarta Sans", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-lapis-deep);
+      color: var(--text-white);
+      line-height: 1.7;
+      letter-spacing: 0.02em;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    @media (min-width: 540px) {
+      body {
+        padding: 24px 16px;
+      }
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 540px;
+      min-height: 100vh;
+      background-color: var(--bg-lapis);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    @media (min-width: 540px) {
+      .app-shell {
+        min-height: 820px;
+        border-radius: 26px;
+        border: 1px solid var(--border-subtle);
+        box-shadow: 0 24px 56px rgba(9, 24, 44, 0.35);
+      }
+    }
+
+    .splash-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: var(--bg-lapis);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 1;
+      transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: auto;
+    }
+
+    .splash-overlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-logo {
+      font-family: "Plus Jakarta Sans", sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .splash-logo.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .splash-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+    }
+
+    .main-reveal {
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-reveal.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .app-header {
+      background-color: var(--bg-lapis);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding: 14px 18px 12px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-family: "Plus Jakarta Sans", sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: -0.01em;
+    }
+
+    .header-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-white);
+      background-color: var(--bg-surface-alt);
+      border: 1px solid var(--border-subtle);
+      padding: 4px 11px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .main-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      background-color: var(--bg-surface-alt);
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-soft);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 7px 4px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tab-btn.active {
+      background-color: #FFFFFF;
+      color: var(--bg-lapis);
+      box-shadow: 0 2px 6px rgba(9, 24, 44, 0.25);
+    }
+
+    .screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px 16px 26px;
+      animation: fadeScreenIn 0.24s ease-out;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @keyframes fadeScreenIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stack-md { display: flex; flex-direction: column; gap: 14px; }
+    .stack-sm { display: flex; flex-direction: column; gap: 9px; }
+
+    .card-box {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+    }
+
+    .card-deep {
+      background-color: var(--bg-surface-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+
+    .hero-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 22px 18px;
+      text-align: center;
+    }
+
+    .hero-title {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.45;
+      margin-bottom: 10px;
+    }
+
+    .hero-desc {
+      font-size: 13px;
+      color: var(--text-soft);
+      line-height: 1.7;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 15px 18px;
+      border: none;
+      border-radius: var(--radius-md);
+      background-color: #FFFFFF;
+      color: var(--bg-lapis);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 18px rgba(9, 24, 44, 0.24);
+      transition: transform 0.12s ease, opacity 0.15s ease;
+    }
+
+    .btn-primary:active { transform: scale(0.985); }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background-color: var(--bg-surface-alt);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .stage-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background-color: var(--bg-surface-alt);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 7px;
+      background-color: var(--bg-surface-alt);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background-color: #FFFFFF;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .question-box {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px 16px;
+      min-height: 132px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .q-num { font-size: 12px; font-weight: 700; color: var(--accent-sky); margin-bottom: 6px; }
+    .q-text { font-size: 16px; font-weight: 700; line-height: 1.6; }
+
+    .choice-btn {
+      width: 100%;
+      padding: 13px 15px;
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background-color: var(--bg-surface);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .choice-btn.is-selected {
+      background-color: #FFFFFF;
+      border-color: #FFFFFF;
+      color: var(--bg-lapis);
+    }
+
+    .choice-main { font-size: 14px; font-weight: 700; display: block; }
+    .choice-sub { font-size: 11px; opacity: 0.78; display: block; margin-top: 2px; }
+    .choice-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .bar-row { margin-bottom: 11px; }
+    .bar-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+    .bar-track { width: 100%; height: 8px; background-color: var(--bg-lapis-deep); border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; background-color: #FFFFFF; transition: width 0.45s ease; }
+
+    .viewer-wrapper {
+      position: relative;
+      width: 100%;
+      height: 390px;
+      background: radial-gradient(circle at 50% 35%, #173254 0%, #0A1628 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-strong);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .viewer-wrapper canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .viewer-hud-top {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      z-index: 10;
+    }
+
+    .layer-chip {
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background-color: rgba(11, 25, 44, 0.78);
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: all 0.15s ease;
+    }
+
+    .layer-chip.active {
+      background-color: #FFFFFF;
+      color: var(--bg-lapis);
+      border-color: #FFFFFF;
+    }
+
+    .viewer-hud-bottom {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .hud-hint {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.78);
+      background-color: rgba(10, 22, 40, 0.72);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .cam-btns {
+      display: flex;
+      gap: 4px;
+      pointer-events: auto;
+    }
+
+    .cam-btn {
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background-color: rgba(10, 22, 40, 0.8);
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .meridian-scroll {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .meridian-pill {
+      border: 1px solid var(--border-subtle);
+      background-color: var(--bg-surface-alt);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.14s ease;
+    }
+
+    .meridian-pill.active {
+      background-color: #FFFFFF;
+      color: var(--bg-lapis);
+      border-color: #FFFFFF;
+    }
+
+    .m-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sub-mode-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background-color: var(--bg-surface-alt);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .sub-mode-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-soft);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+
+    .sub-mode-btn.active {
+      background-color: #FFFFFF;
+      color: var(--bg-lapis);
+    }
+
+    .point-row-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      cursor: pointer;
+    }
+
+    .point-row-card.highlighted {
+      border: 2px solid #FFFFFF;
+      background-color: #2E70B3;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-strong);
+      background-color: var(--bg-surface-alt);
+      color: #FFFFFF;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .gogyo-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-strong);
+      background-color: var(--bg-surface-alt);
+    }
+
+    .gogyo-table {
+      width: 100%;
+      min-width: 460px;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .gogyo-table th,
+    .gogyo-table td {
+      padding: 10px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .gogyo-table th {
+      font-weight: 700;
+      background-color: rgba(11, 28, 52, 0.55);
+    }
+
+    .gogyo-table td:first-child,
+    .gogyo-table th:first-child {
+      font-weight: 700;
+      background-color: rgba(11, 28, 52, 0.45);
+      white-space: nowrap;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+    }
+
+    .el-wood { background-color: rgba(52, 211, 153, 0.22); color: #A7F3D0; }
+    .el-fire { background-color: rgba(248, 113, 113, 0.22); color: #FECACA; }
+    .el-earth { background-color: rgba(251, 191, 36, 0.22); color: #FDE68A; }
+    .el-metal { background-color: rgba(226, 232, 240, 0.22); color: #F8FAFC; }
+    .el-water { background-color: rgba(96, 165, 250, 0.25); color: #BFDBFE; }
+
+    .toast-banner {
+      background-color: #FFFFFF;
+      color: var(--bg-lapis);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+    }
+
+    .tongue-camera-stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background-color: #0A1628;
+      border-radius: var(--radius-lg);
+      border: 1.5px solid var(--border-strong);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tongue-camera-stage video,
+    .tongue-camera-stage img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .tongue-overlay-guide {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tongue-oval-frame {
+      width: 46%;
+      height: 62%;
+      border: 2.5px dashed rgba(255, 255, 255, 0.82);
+      border-radius: 50% 50% 48% 48% / 40% 40% 60% 60%;
+      box-shadow: 0 0 0 9999px rgba(10, 22, 40, 0.42);
+    }
+
+    .tongue-frame-caption {
+      position: absolute;
+      bottom: 10px;
+      background-color: rgba(10, 22, 40, 0.8);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+
+    .tongue-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .tongue-metric {
+      background-color: var(--bg-surface-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+
+    .tongue-metric-label {
+      font-size: 10px;
+      color: var(--accent-sky);
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .tongue-metric-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+    }
+  </style>
+</head>
+<body>
+  <div id="splash-overlay" class="splash-overlay">
+    <div id="splash-logo" class="splash-logo">
+      <span class="splash-dot"></span>
+      <span>Traditional Medicine.ai</span>
+    </div>
+  </div>
+
+  <div id="main-reveal" class="main-reveal">
+    <main class="app-shell">
+      <header class="app-header">
+        <div class="header-top">
+          <div class="brand">
+            <span class="brand-dot"></span>
+            <span class="brand-title">Traditional Medicine.ai</span>
+          </div>
+          <span id="header-badge" class="header-badge">体質問診・全18問</span>
+        </div>
+
+        <nav class="main-tabs" aria-label="メイン機能切り替え">
+          <button type="button" id="tab-check" class="tab-btn active" data-tab="check">体質問診</button>
+          <button type="button" id="tab-acupoint" class="tab-btn" data-tab="acupoint">3D経絡・ツボ</button>
+          <button type="button" id="tab-tongue" class="tab-btn" data-tab="tongue">舌診カメラ</button>
+          <button type="button" id="tab-dict" class="tab-btn" data-tab="dict">ツボ辞典・五行</button>
+        </nav>
+      </header>
+
+      <!-- ==================== 1. 体質問診 ==================== -->
+      <div id="mode-check" style="flex: 1; display: flex; flex-direction: column;">
+        <section id="screen-start" class="screen">
+          <div class="stack-md">
+            <div class="hero-card">
+              <h1 class="hero-title">今のあなたの<br />「体質・五臓バランス」を知る</h1>
+              <p class="hero-desc">
+                基本の12問＋五臓深掘り6問（全18問）から、6つの体質傾向（陽虚・気虚・気滞・血虚・血瘀・痰湿）と五臓（肝・心・脾・肺・腎）のバランスを可視化します。
+              </p>
+            </div>
+
+            <div class="card-box stack-sm">
+              <div style="font-size: 12px; font-weight: 700; color: var(--accent-sky);">チェックの進め方</div>
+              <p style="font-size: 13px; color: var(--text-soft);">1. ここ1〜2週間の体調を思い浮かべて4択から直感で選択</p>
+              <p style="font-size: 13px; color: var(--text-soft);">2. 第1段階（12問）の後、関連する五臓の質問（6問）へ進行</p>
+              <p style="font-size: 13px; color: var(--text-soft);">3. 結果画面からおすすめツボを3D経絡マップでそのまま確認</p>
+            </div>
+
+            <div class="card-deep" style="font-size: 11px; color: var(--text-muted);">
+              ※本アプリは東洋医学の考え方に基づくセルフケア・問診補助の目安であり、医師による医学的診断や治療に代わるものではありません。
+            </div>
+          </div>
+
+          <div style="padding-top: 18px;">
+            <button id="btn-start-check" type="button" class="btn-primary">
+              <span>体質チェックを始める（全18問）</span>
+            </button>
+          </div>
+        </section>
+
+        <section id="screen-question" class="screen hidden">
+          <div class="stack-md">
+            <div>
+              <div class="progress-meta">
+                <span id="stage-pill" class="stage-pill">第1段階: 基本体質バランス</span>
+                <span id="q-counter" style="font-size: 12px; font-weight: 700;">質問 1 / 18</span>
+              </div>
+              <div class="progress-track">
+                <div id="progress-fill" class="progress-fill" style="width: 5.5%;"></div>
+              </div>
+            </div>
+
+            <div class="question-box">
+              <div id="q-num-label" class="q-num">Q1.</div>
+              <h2 id="q-text" class="q-text"></h2>
+            </div>
+
+            <div class="stack-sm" id="choices-list">
+              <button type="button" class="choice-btn" data-score="3">
+                <div>
+                  <span class="choice-main">いつもそう</span>
+                  <span class="choice-sub">ほぼ毎日・強く当てはまる</span>
+                </div>
+                <span class="choice-mark">◎</span>
+              </button>
+              <button type="button" class="choice-btn" data-score="2">
+                <div>
+                  <span class="choice-main">よくある</span>
+                  <span class="choice-sub">週に何度か・よく感じる</span>
+                </div>
+                <span class="choice-mark">○</span>
+              </button>
+              <button type="button" class="choice-btn" data-score="1">
+                <div>
+                  <span class="choice-main">たまにある</span>
+                  <span class="choice-sub">疲れた時や季節によって感じる</span>
+                </div>
+                <span class="choice-mark">△</span>
+              </button>
+              <button type="button" class="choice-btn" data-score="0">
+                <div>
+                  <span class="choice-main">ない</span>
+                  <span class="choice-sub">あまり気にならない・当てはまらない</span>
+                </div>
+                <span class="choice-mark">ー</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 14px;">
+            <button id="btn-prev-q" type="button" class="btn-secondary" style="width: auto; padding: 8px 14px; font-size: 12px;">前の質問へ</button>
+            <span style="font-size: 11px; color: var(--text-muted);">タップで次へ進みます</span>
+          </div>
+        </section>
+
+        <section id="screen-transition" class="screen hidden">
+          <div class="stack-md">
+            <div class="card-box">
+              <span class="stage-pill">第1段階 完了（12 / 18問）</span>
+              <h2 class="hero-title" style="text-align: left; margin-top: 10px;">基本バランスの確認が完了しました</h2>
+              <p class="hero-desc" style="text-align: left;">ここまでの回答をもとに、関連する五臓のサインをあと6問確認します。</p>
+              <div id="transition-chips" style="display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0;"></div>
+              <div class="card-deep">
+                <div style="font-size: 11px; color: var(--accent-sky); font-weight: 700;">続いて確認する五臓（残り6問）</div>
+                <div id="transition-zang-text" style="font-size: 13px; font-weight: 700; margin-top: 4px;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stack-sm" style="padding-top: 18px;">
+            <button id="btn-to-stage2" type="button" class="btn-primary">五臓の深掘りへ進む（残り6問）</button>
+            <button id="btn-back-to-q12" type="button" class="btn-secondary">Q12の回答を修正する</button>
+          </div>
+        </section>
+
+        <section id="screen-result" class="screen hidden">
+          <div class="stack-md">
+            <div class="hero-card" style="text-align: left;">
+              <span class="stage-pill">体質・五臓バランス診断結果</span>
+              <h2 id="result-title" class="hero-title" style="margin-top: 10px;"></h2>
+              <p id="result-summary" class="hero-desc"></p>
+            </div>
+
+            <div class="card-box">
+              <div style="font-size: 13px; font-weight: 700; margin-bottom: 12px;">6つの基本体質バランス</div>
+              <div id="base-bars"></div>
+              <div style="border-top: 1px dashed var(--border-subtle); margin-top: 14px; padding-top: 14px;">
+                <div style="font-size: 13px; font-weight: 700; margin-bottom: 12px;">深掘りした五臓のサイン度</div>
+                <div id="zang-bars"></div>
+              </div>
+            </div>
+
+            <div class="card-box stack-sm">
+              <div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--accent-sky);">● 今の状態のイメージ</div>
+                <p id="advice-image" style="font-size: 13px; color: var(--text-soft); margin-top: 3px;"></p>
+              </div>
+              <div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--accent-mint);">● おすすめの日常養生・食養生</div>
+                <p id="advice-care" style="font-size: 13px; color: var(--text-soft); margin-top: 3px;"></p>
+              </div>
+              <div class="card-deep">
+                <div style="font-size: 12px; font-weight: 700; color: var(--accent-sky);">● セルフケアにおすすめのツボ</div>
+                <p id="advice-acupoints" style="font-size: 12px; color: var(--text-soft); margin-top: 3px;"></p>
+                <button id="btn-open-3d-from-result" type="button" class="btn-primary" style="margin-top: 10px; padding: 11px 14px; font-size: 12px;">
+                  このおすすめツボを3D経絡マップで見る
+                </button>
+              </div>
+            </div>
+
+            <div class="card-box stack-sm">
+              <div style="font-size: 13px; font-weight: 700;">参考：このタイプで検討される代表的な漢方処方</div>
+              <div id="kampo-list" class="stack-sm"></div>
+              <p style="font-size: 11px; color: var(--text-muted);">
+                ※漢方薬は体力（虚実）や現在の症状によって選び方が異なります。服用時は医師・薬剤師にご相談ください。
+              </p>
+            </div>
+
+            <div id="copy-toast" class="toast-banner hidden">問診結果をクリップボードにコピーしました</div>
+          </div>
+
+          <div class="stack-sm" style="padding-top: 18px;">
+            <button id="btn-copy-result" type="button" class="btn-primary">問診結果をコピーする</button>
+            <button id="btn-restart-check" type="button" class="btn-secondary">最初からやり直す</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- ==================== 2. 3D経絡・ツボ ==================== -->
+      <section id="mode-acupoint" class="screen hidden">
+        <div class="stack-md">
+          <div class="sub-mode-bar">
+            <button type="button" id="submode-meridian" class="sub-mode-btn active">経絡・ツボ3D（14経脈）</button>
+            <button type="button" id="submode-anatomy" class="sub-mode-btn">現代解剖3D（.glb読込）</button>
+          </div>
+
+          <div id="panel-meridian-3d" class="stack-md">
+            <div class="card-box stack-sm">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--accent-sky);">十四経脈フィルター</span>
+                <button type="button" id="btn-all-meridians" class="cam-btn">全経脈表示</button>
+              </div>
+              <div id="meridian-pills" class="meridian-scroll"></div>
+            </div>
+
+            <div class="viewer-wrapper" id="viewer-wrapper-3d">
+              <div class="viewer-hud-top">
+                <button type="button" class="layer-chip active" data-layer="skin">体表</button>
+                <button type="button" class="layer-chip active" data-layer="meridian">経絡線</button>
+                <button type="button" class="layer-chip active" data-layer="acupoint">ツボ</button>
+                <button type="button" class="layer-chip" data-layer="skeleton">骨格</button>
+                <button type="button" class="layer-chip" data-layer="organ">五臓</button>
+              </div>
+
+              <div class="viewer-hud-bottom">
+                <span class="hud-hint">ドラッグで回転 / ピンチ・スクロールで拡大 / ツボをタップ</span>
+                <div class="cam-btns">
+                  <button type="button" class="cam-btn" data-cam="front">正面</button>
+                  <button type="button" class="cam-btn" data-cam="side">側面</button>
+                  <button type="button" class="cam-btn" data-cam="back">背面</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="selected-point-card" class="card-box stack-sm">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span id="sp-meridian-badge" class="stage-pill">肺経（LU）</span>
+                  <h3 id="sp-name" style="font-size: 17px; font-weight: 700; margin-top: 6px;">太淵（たいえん）</h3>
+                </div>
+                <span id="sp-code" style="font-size: 12px; font-weight: 700; color: var(--accent-sky);">LU9</span>
+              </div>
+              <p id="sp-location" style="font-size: 12px; color: var(--text-soft);"></p>
+              <p id="sp-indication" style="font-size: 12px; color: var(--text-soft);"></p>
+              <div class="card-deep" style="font-size: 12px; color: var(--accent-mint);" id="sp-massage"></div>
+            </div>
+          </div>
+
+          <div id="panel-anatomy-3d" class="stack-md hidden">
+            <div class="card-box stack-sm">
+              <div style="font-size: 13px; font-weight: 700;">外部解剖3Dモデル（.glb / .gltf）ビューア</div>
+              <p style="font-size: 12px; color: var(--text-soft);">
+                Z-AnatomyやBodyParts3D等から書き出した <code>.glb</code> ファイルを読み込んで回転・拡大・パーツ非表示ができます。
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <label class="btn-primary" style="width: auto; padding: 10px 14px; font-size: 12px; cursor: pointer;">
+                  <span>.glb / .gltf ファイルを選択</span>
+                  <input type="file" id="glb-file-input" accept=".glb,.gltf" class="sr-only" />
+                </label>
+                <button type="button" id="btn-reset-anatomy-parts" class="btn-secondary" style="width: auto; padding: 10px 14px; font-size: 12px;">非表示パーツを戻す</button>
+              </div>
+              <div id="glb-status-text" style="font-size: 11px; color: var(--accent-sky);">待機中：ファイルを選択するか、下のビューアにドラッグ＆ドロップしてください。</div>
+            </div>
+
+            <div class="viewer-wrapper" id="viewer-wrapper-glb">
+              <div class="viewer-hud-bottom">
+                <span class="hud-hint">ドラッグで回転 / タップでパーツ情報・非表示</span>
+                <div class="cam-btns">
+                  <button type="button" class="cam-btn" id="btn-glb-hide-selected">選択パーツを隠す</button>
+                  <button type="button" class="cam-btn" id="btn-glb-reset-cam">視点リセット</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="glb-part-info" class="card-deep" style="font-size: 12px; color: var(--text-soft);">
+              タップした解剖パーツの名前がここに表示されます。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 3. 舌診カメラ ==================== -->
+      <section id="mode-tongue" class="screen hidden">
+        <div class="stack-md">
+          <div class="card-box stack-sm">
+            <h2 style="font-size: 16px; font-weight: 700;">舌診セルフチェック（カメラ・写真解析）</h2>
+            <p style="font-size: 12px; color: var(--text-soft);">
+              自然光や明るい室内で舌を自然に突き出し、枠内に合わせて撮影または画像を選択してください。
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" id="btn-start-camera" class="btn-primary" style="width: auto; padding: 10px 14px; font-size: 12px;">カメラを起動</button>
+              <button type="button" id="btn-capture-tongue" class="btn-secondary" style="width: auto; padding: 10px 14px; font-size: 12px;" disabled>撮影して解析</button>
+              <label class="btn-secondary" style="width: auto; padding: 10px 14px; font-size: 12px; cursor: pointer;">
+                <span>写真を選ぶ</span>
+                <input type="file" id="tongue-file-input" accept="image/*" class="sr-only" />
+              </label>
+            </div>
+            <div id="tongue-camera-msg" style="font-size: 11px; color: var(--accent-sky);"></div>
+          </div>
+
+          <div class="tongue-camera-stage" id="tongue-stage">
+            <video id="tongue-video" autoplay playsinline muted class="hidden"></video>
+            <img id="tongue-preview-img" alt="舌診プレビュー" class="hidden" />
+            <div id="tongue-placeholder" style="text-align: center; padding: 16px; font-size: 12px; color: var(--text-muted);">
+              カメラを起動するか、舌の写真を選択してください
+            </div>
+            <div class="tongue-overlay-guide">
+              <div class="tongue-oval-frame"></div>
+              <span class="tongue-frame-caption">舌を点線枠の中央に合わせてください</span>
+            </div>
+          </div>
+
+          <canvas id="tongue-analysis-canvas" class="sr-only"></canvas>
+
+          <div id="tongue-result-card" class="card-box stack-sm hidden">
+            <div style="font-size: 13px; font-weight: 700; color: var(--accent-mint);">舌色・舌苔の目安解析</div>
+            <div class="tongue-grid">
+              <div class="tongue-metric">
+                <div class="tongue-metric-label">舌質の色味傾向</div>
+                <div id="tm-color" class="tongue-metric-val">--</div>
+              </div>
+              <div class="tongue-metric">
+                <div class="tongue-metric-label">舌苔の厚み・状態</div>
+                <div id="tm-coat" class="tongue-metric-val">--</div>
+              </div>
+            </div>
+            <p id="tm-comment" style="font-size: 12px; color: var(--text-soft);"></p>
+            <p style="font-size: 11px; color: var(--text-muted);">
+              ※照明環境や口紅・飲食の影響を受けます。参考目安としてご活用ください。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 4. ツボ辞典・五行 ==================== -->
+      <section id="mode-dict" class="screen hidden">
+        <div class="stack-md">
+          <div class="sub-mode-bar">
+            <button type="button" id="submode-dict-list" class="sub-mode-btn active">ツボ辞典（検索・絞り込み）</button>
+            <button type="button" id="submode-gogyo" class="sub-mode-btn">五行配当表</button>
+          </div>
+
+          <div id="panel-dict-list" class="stack-md">
+            <input type="search" id="dict-search-input" class="search-input" placeholder="ツボ名・経絡・症状で検索（例：足三里、冷え、肩こり、眠り）" />
+            <div id="dict-meridian-filter" class="meridian-scroll"></div>
+            <div id="dict-points-container" class="stack-sm"></div>
+          </div>
+
+          <div id="panel-gogyo" class="card-box stack-sm hidden">
+            <div style="font-size: 14px; font-weight: 700;">五行配当表（木・火・土・金・水）</div>
+            <p style="font-size: 12px; color: var(--text-soft);">横スクロールで各要素の配当を確認できます。</p>
+            <div class="gogyo-table-wrap">
+              <table class="gogyo-table">
+                <thead>
+                  <tr>
+                    <th>項目</th>
+                    <th class="el-wood">木</th>
+                    <th class="el-fire">火</th>
+                    <th class="el-earth">土</th>
+                    <th class="el-metal">金</th>
+                    <th class="el-water">水</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>五臓</td>
+                    <td class="el-wood">肝</td>
+                    <td class="el-fire">心</td>
+                    <td class="el-earth">脾</td>
+                    <td class="el-metal">肺</td>
+                    <td class="el-water">腎</td>
+                  </tr>
+                  <tr>
+                    <td>六腑</td>
+                    <td class="el-wood">胆</td>
+                    <td class="el-fire">小腸</td>
+                    <td class="el-earth">胃</td>
+                    <td class="el-metal">大腸</td>
+                    <td class="el-water">膀胱</td>
+                  </tr>
+                  <tr>
+                    <td>季節</td>
+                    <td class="el-wood">春</td>
+                    <td class="el-fire">夏</td>
+                    <td class="el-earth">長夏・土用</td>
+                    <td class="el-metal">秋</td>
+                    <td class="el-water">冬</td>
+                  </tr>
+                  <tr>
+                    <td>五味</td>
+                    <td class="el-wood">酸</td>
+                    <td class="el-fire">苦</td>
+                    <td class="el-earth">甘</td>
+                    <td class="el-metal">辛</td>
+                    <td class="el-water">鹹</td>
+                  </tr>
+                  <tr>
+                    <td>五志</td>
+                    <td class="el-wood">怒</td>
+                    <td class="el-fire">喜</td>
+                    <td class="el-earth">思</td>
+                    <td class="el-metal">憂・悲</td>
+                    <td class="el-water">恐・驚</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <textarea id="clipboard-buffer" class="sr-only" aria-hidden="true"></textarea>
+
+  <script>
+    (function () {
+      const MERIDIANS = {
+        LU: { key: 'LU', name: '手の太陰肺経', short: '肺経', color: '#60A5FA', organ: '肺' },
+        LI: { key: 'LI', name: '手の陽明大腸経', short: '大腸経', color: '#93C5FD', organ: '大腸' },
+        ST: { key: 'ST', name: '足の陽明胃経', short: '胃経', color: '#FBBF24', organ: '胃' },
+        SP: { key: 'SP', name: '足の太陰脾経', short: '脾経', color: '#F59E0B', organ: '脾' },
+        HT: { key: 'HT', name: '手の少陰心経', short: '心経', color: '#F87171', organ: '心' },
+        SI: { key: 'SI', name: '手の太陽小腸経', short: '小腸経', color: '#FB7185', organ: '小腸' },
+        BL: { key: 'BL', name: '足の太陽膀胱経', short: '膀胱経', color: '#38BDF8', organ: '膀胱' },
+        KI: { key: 'KI', name: '足の少陰腎経', short: '腎経', color: '#818CF8', organ: '腎' },
+        PC: { key: 'PC', name: '手の厥陰心包経', short: '心包経', color: '#F472B6', organ: '心包' },
+        TE: { key: 'TE', name: '手の少陽三焦経', short: '三焦経', color: '#C084FC', organ: '三焦' },
+        GB: { key: 'GB', name: '足の少陽胆経', short: '胆経', color: '#34D399', organ: '胆' },
+        LR: { key: 'LR', name: '足の厥陰肝経', short: '肝経', color: '#10B981', organ: '肝' },
+        GV: { key: 'GV', name: '督脈', short: '督脈', color: '#E2E8F0', organ: '陽経総督' },
+        CV: { key: 'CV', name: '任脈', short: '任脈', color: '#6EE7B7', organ: '陰経総任' }
+      };
+
+      const ACUPOINTS = [
+        { id: 'LU9', code: 'LU9', name: '太淵（たいえん）', meridian: 'LU', pos: [-0.46, 0.86, 0.14], location: '手首の横ジワの親指側、脈が触れるくぼみ', indication: '呼吸の疲れ、咳・のどの違和感、手首の張り', massage: '反対側の親指でゆっくり5秒押して離すのを5回繰り返します。' },
+        { id: 'LI4', code: 'LI4', name: '合谷（ごうこく）', meridian: 'LI', pos: [-0.52, 0.78, 0.22], location: '手の甲側、親指と人差し指の骨が合流するくぼみ', indication: '肩こり、頭の重さ、ストレスによる張り、顔の疲れ', massage: '人差し指の骨側へ向けてじんわり押圧します。' },
+        { id: 'ST36', code: 'ST36', name: '足三里（あしさんり）', meridian: 'ST', pos: [-0.18, -0.42, 0.16], location: 'ひざのお皿の外側下にあるくぼみから指4本分下', indication: '胃腸の疲れ、食欲不振、全身の倦怠感、足の重だるさ', massage: '痛気持ちいい強さでゆっくり押しほぐします。' },
+        { id: 'ST25', code: 'ST25', name: '天枢（てんすう）', meridian: 'ST', pos: [-0.12, 0.96, 0.19], location: 'おへその中心から左右へ指3本分外側', indication: 'おなかの張り、便秘・軟便、胃腸の調子を整える', massage: '仰向けでおなかを温めながら優しく押します。' },
+        { id: 'SP6', code: 'SP6', name: '三陰交（さんいんこう）', meridian: 'SP', pos: [-0.12, -0.92, 0.08], location: '内くるぶしの頂点から指4本分上、すねの骨のきわ', indication: '冷え、むくみ、血の巡り・うるおい不足、眠りの浅さ', massage: 'すねの骨の内側に沿って上へ押し上げるように刺激します。' },
+        { id: 'SP9', code: 'SP9', name: '陰陵泉（いんりょうせん）', meridian: 'SP', pos: [-0.10, -0.44, 0.06], location: 'ひざの内側下、すねの骨をなぞり上げて止まるくぼみ', indication: 'むくみ、余分な水分・湿気による重だるさ、ひざまわり', massage: 'ひざの内側を親指でゆっくり押し込みます。' },
+        { id: 'HT7', code: 'HT7', name: '神門（しんもん）', meridian: 'HT', pos: [-0.42, 0.86, 0.15], location: '手首の横ジワの小指側、筋の内側のくぼみ', indication: '眠りの浅さ、ドキドキ感、気分の落ち着かなさ', massage: '呼吸を整えながら優しく5秒押圧します。' },
+        { id: 'SI3', code: 'SI3', name: '後渓（こうけい）', meridian: 'SI', pos: [-0.56, 0.75, 0.12], location: '手を軽く握ったとき、小指の付け根の外側にできる横ジワの端', indication: '首や背中のこり、寝違え感、頭の重さ', massage: '反対側の指先で骨のきわを心地よく押します。' },
+        { id: 'BL23', code: 'BL23', name: '腎兪（じんゆ）', meridian: 'BL', pos: [-0.11, 1.08, -0.17], location: '第2腰椎棘突起の下から外方へ指2本分（ウエスト付近の背中）', indication: '腰のだるさ、冷え、生命力・疲れやすさのケア', massage: '両手を腰に当て、親指または手のひらで温めるように押します。' },
+        { id: 'BL60', code: 'BL60', name: '崑崙（こんろん）', meridian: 'BL', pos: [-0.16, -1.16, -0.07], location: '外くるぶしとアキレス腱の間のくぼみ', indication: '腰や背中の張り、足の疲れ、頭の重だるさ', massage: 'アキレス腱を傷めないよう優しく押します。' },
+        { id: 'KI3', code: 'KI3', name: '太渓（たいけい）', meridian: 'KI', pos: [-0.11, -1.16, -0.06], location: '内くるぶしとアキレス腱の間のくぼみ', indication: '足元の冷え、腰やひざの心もとなさ、疲れの回復', massage: '内くるぶしの後ろのくぼみをじんわり押します。' },
+        { id: 'PC6', code: 'PC6', name: '内関（ないかん）', meridian: 'PC', pos: [-0.44, 0.92, 0.16], location: '手首の横ジワから指3本分ひじ側の2本の筋の間', indication: '胸やおなかのつかえ、乗り物酔い・胃の不快感、緊張緩和', massage: '前腕の真ん中をゆっくり押しほぐします。' },
+        { id: 'TE5', code: 'TE5', name: '外関（がいかん）', meridian: 'TE', pos: [-0.47, 0.92, 0.11], location: '手首の横ジワ（甲側）から指3本分ひじ側、2本の骨の間', indication: '肩や首のこり、天気の変化による不調、腕の疲れ', massage: '反対側の親指で心地よい強さに押します。' },
+        { id: 'GB20', code: 'GB20', name: '風池（ふうち）', meridian: 'GB', pos: [-0.10, 1.56, -0.10], location: '後頭部の髪の生え際で、太い筋の外側のくぼみ', indication: '目の疲れ、首や肩のこり、頭の重さ', massage: '頭頂部へ向かって斜め上に押し上げるように押します。' },
+        { id: 'GB21', code: 'GB21', name: '肩井（けんせい）', meridian: 'GB', pos: [-0.24, 1.43, -0.02], location: '首の付け根と肩先のちょうど真ん中', indication: '肩こり、背中の張り、気の巡りの滞り', massage: '反対側の指先で肩の上から優しく押します。' },
+        { id: 'LR3', code: 'LR3', name: '太衝（たいしょう）', meridian: 'LR', pos: [-0.15, -1.24, 0.10], location: '足の親指と人差し指の骨が交わる手前のくぼみ', indication: 'イライラ・ストレス、気の滞り、目の疲れ、足の張り', massage: '足先から足首方向へ骨に沿ってゆっくり押します。' },
+        { id: 'GV20', code: 'GV20', name: '百会（ひゃくえ）', meridian: 'GV', pos: [0.0, 1.72, 0.0], location: '両耳の最も高い点を結ぶ線と、顔の中心線の交わる頭頂部', indication: '頭のすっきり感、気分転換、眠りや自律神経のケア', massage: '頭頂部を両手の中指で真下へじんわり押します。' },
+        { id: 'GV4', code: 'GV4', name: '命門（めいもん）', meridian: 'GV', pos: [0.0, 1.08, -0.18], location: 'おへその真裏の背骨のくぼみ（第2腰椎棘突起の下）', indication: '冷え、腰のだるさ、温める力のサポート', massage: '手のひらやカイロで温めるのもおすすめです。' },
+        { id: 'CV6', code: 'CV6', name: '気海（きかい）', meridian: 'CV', pos: [0.0, 1.00, 0.21], location: 'おへそから指2本分真下', indication: 'エネルギー（気）の補給、疲れやすさ、おなかのケア', massage: '仰向けでおなかをリラックスさせて優しく押します。' },
+        { id: 'CV4', code: 'CV4', name: '関元（かんげん）', meridian: 'CV', pos: [0.0, 0.92, 0.20], location: 'おへそから指4本分真下', indication: '冷え、元気・体力の土台、おなかの冷え対策', massage: '冷やさないよう温めながら優しく押します。' }
+      ];
+
+      const MERIDIAN_PATHS = [
+        { meridian: 'LU', pts: [[-0.22, 1.40, 0.05], [-0.34, 1.24, 0.12], [-0.42, 0.98, 0.15], [-0.46, 0.86, 0.14], [-0.52, 0.80, 0.18]] },
+        { meridian: 'LI', pts: [[-0.52, 0.78, 0.22], [-0.46, 0.90, 0.12], [-0.35, 1.26, 0.08], [-0.22, 1.45, 0.04], [-0.05, 1.56, 0.14]] },
+        { meridian: 'ST', pts: [[-0.07, 1.56, 0.14], [-0.14, 1.38, 0.15], [-0.12, 0.96, 0.19], [-0.15, 0.40, 0.16], [-0.18, -0.42, 0.16], [-0.16, -1.24, 0.14]] },
+        { meridian: 'SP', pts: [[-0.15, -1.25, 0.09], [-0.12, -0.92, 0.08], [-0.10, -0.44, 0.06], [-0.13, 0.45, 0.13], [-0.16, 1.24, 0.11]] },
+        { meridian: 'HT', pts: [[-0.20, 1.34, 0.06], [-0.34, 1.15, 0.12], [-0.42, 0.86, 0.15], [-0.50, 0.76, 0.14]] },
+        { meridian: 'SI', pts: [[-0.56, 0.75, 0.12], [-0.45, 0.92, 0.04], [-0.32, 1.25, -0.04], [-0.22, 1.43, -0.05], [-0.08, 1.56, 0.08]] },
+        { meridian: 'BL', pts: [[-0.05, 1.66, 0.10], [-0.07, 1.62, -0.14], [-0.11, 1.25, -0.17], [-0.11, 1.08, -0.17], [-0.15, 0.35, -0.15], [-0.16, -0.45, -0.12], [-0.16, -1.16, -0.07]] },
+        { meridian: 'KI', pts: [[-0.14, -1.26, 0.04], [-0.11, -1.16, -0.06], [-0.09, -0.45, -0.03], [-0.10, 0.45, 0.08], [-0.07, 1.10, 0.14]] },
+        { meridian: 'PC', pts: [[-0.22, 1.36, 0.08], [-0.36, 1.16, 0.14], [-0.44, 0.92, 0.16], [-0.50, 0.78, 0.17]] },
+        { meridian: 'TE', pts: [[-0.51, 0.78, 0.12], [-0.47, 0.92, 0.11], [-0.35, 1.22, 0.06], [-0.24, 1.43, 0.01], [-0.09, 1.58, 0.04]] },
+        { meridian: 'GB', pts: [[-0.11, 1.60, 0.04], [-0.10, 1.56, -0.10], [-0.24, 1.43, -0.02], [-0.18, 0.40, 0.02], [-0.20, -0.42, 0.03], [-0.15, -1.24, 0.10]] },
+        { meridian: 'LR', pts: [[-0.15, -1.24, 0.10], [-0.12, -0.88, 0.05], [-0.11, -0.42, 0.03], [-0.14, 0.55, 0.12]] },
+        { meridian: 'GV', pts: [[0.0, 1.72, 0.0], [0.0, 1.58, -0.16], [0.0, 1.25, -0.18], [0.0, 1.08, -0.18], [0.0, 0.65, -0.17]] },
+        { meridian: 'CV', pts: [[0.0, 1.46, 0.14], [0.0, 1.15, 0.21], [0.0, 1.00, 0.21], [0.0, 0.92, 0.20], [0.0, 0.78, 0.18]] }
+      ];
+
+      const BASE_PATTERNS = {
+        陽虚: { key: '陽虚', label: '陽虚（ようきょ）', shortTag: '冷え・温める力不足', defaultZangs: ['腎', '脾'], recommendedPoints: ['GV4', 'CV4', 'KI3'] },
+        気虚: { key: '気虚', label: '気虚（ききょ）', shortTag: 'エネルギー・元気不足', defaultZangs: ['脾', '肺'], recommendedPoints: ['ST36', 'CV6', 'LU9'] },
+        気滞: { key: '気滞', label: '気滞（きたい）', shortTag: '気のめぐり停滞', defaultZangs: ['肝', '心'], recommendedPoints: ['LR3', 'LI4', 'PC6'] },
+        血虚: { key: '血虚', label: '血虚（けっきょ）', shortTag: '栄養・うるおい不足', defaultZangs: ['肝', '心'], recommendedPoints: ['SP6', 'HT7', 'LR3'] },
+        血瘀: { key: '血瘀', label: '血瘀（けつお）', shortTag: '血のめぐり・コリ停滞', defaultZangs: ['肝', '心'], recommendedPoints: ['LI4', 'LR3', 'GB21'] },
+        痰湿: { key: '痰湿', label: '痰湿（たんしつ）', shortTag: '余分な水分・重だるさ', defaultZangs: ['脾', '肺'], recommendedPoints: ['SP9', 'ST36', 'ST25'] }
+      };
+
+      const STAGE1_QUESTIONS = [
+        { text: '冬場や冷房の効いた部屋で、手足やおなかが冷えやすいですか？', weights: { 陽虚: 2, 気虚: 1 }, zangSeeds: { 腎: 1, 脾: 1 } },
+        { text: '温かい飲み物や入浴で温まると、体がホッと楽になりますか？', weights: { 陽虚: 2, 血瘀: 1 }, zangSeeds: { 腎: 1, 脾: 1 } },
+        { text: '休んでも疲れが抜けにくく、体力が落ちていると感じますか？', weights: { 気虚: 2, 血虚: 1 }, zangSeeds: { 脾: 1, 肺: 1 } },
+        { text: '夕方になるとぐったりして、話すのもおっくうになりますか？', weights: { 気虚: 2, 陽虚: 1 }, zangSeeds: { 脾: 1, 肺: 1 } },
+        { text: '理由がはっきりしないのに、ため息が出ることがありますか？', weights: { 気滞: 2 }, zangSeeds: { 肝: 2 } },
+        { text: 'ストレスや緊張で、胸やのどがつかえる感じがしますか？', weights: { 気滞: 2 }, zangSeeds: { 肝: 1, 心: 1 } },
+        { text: '急に立ち上がったとき、立ちくらみやクラッとする感じがありますか？', weights: { 血虚: 2, 気虚: 1 }, zangSeeds: { 肝: 1, 心: 1 } },
+        { text: '顔色が冴えないと言われたり、爪が割れやすかったりしますか？', weights: { 血虚: 2 }, zangSeeds: { 肝: 2 } },
+        { text: '肩や首、背中に「ここが凝っている・重だるい」と感じる場所がありますか？', weights: { 血瘀: 2, 気滞: 1 }, zangSeeds: { 肝: 1 } },
+        { text: 'ぶつけた覚えがないのに、あざ（内出血）ができやすいですか？', weights: { 血瘀: 2, 気虚: 1 }, zangSeeds: { 脾: 1, 肝: 1 } },
+        { text: '雨の日や湿気が多い日になると、頭が重くなったり体がだるくなったりしますか？', weights: { 痰湿: 2, 気虚: 1 }, zangSeeds: { 脾: 2 } },
+        { text: '夕方になると、靴下の跡がくっきり残るほど足がむくみやすいですか？', weights: { 痰湿: 2, 陽虚: 1 }, zangSeeds: { 脾: 1, 腎: 1 } }
+      ];
+
+      const ZANG_QUESTIONS = {
+        腎: { label: '腎（じん）', theme: '生命力・足腰の支え・水分と温め', questions: ['腰やひざに、だるさや重さ、心もとなさを感じやすいですか？', '夜中にトイレに起きて、眠りが途切れることがありますか？', '耳鳴りがしたり、音がこもって聞こえにくくなったりすることがありますか？'] },
+        脾: { label: '脾（ひ）', theme: '消化吸収・エネルギー生成・水はけ', questions: ['食事のあとに胃がもたれたり、どっと眠くなったりしやすいですか？', 'おなかが冷えたり緊張したりすると、便が緩くなりやすいですか？', '食欲にムラがあったり、少し食べるとすぐおなかがいっぱいになったりしますか？'] },
+        肝: { label: '肝（かん）', theme: '自律神経・気の巡り・目や筋肉の栄養', questions: ['スマホや読書などで、目が疲れやすい・かすみやすいですか？', 'ふくらはぎや足の指がつりやすかったり、筋肉がピクピクしたりしますか？', 'イライラして眉間にシワが寄ったり、逆に決断に迷いやすかったりしますか？'] },
+        心: { label: '心（しん）', theme: '精神の安定・睡眠・血の循環', questions: ['ちょっとしたことでドキドキしたり、胸のあたりが落ち着かなかったりしますか？', '眠りが浅かったり、夢をたくさん見て朝疲れていたりしますか？', '物忘れが増えたり、集中力が続かずぼんやりしたりすることがありますか？'] },
+        肺: { label: '肺（はい）', theme: '呼吸・バリア機能・皮膚やのどの潤い', questions: ['階段や坂道で息切れしやすかったり、声に力が出なかったりしますか？', '季節の変わり目や冷たい空気で、のどがイガイガしたり咳が出たりしやすいですか？', '皮膚が敏感で荒れやすかったり、鼻水・鼻づまりが出やすかったりしますか？'] }
+      };
+
+      const SYNTHESIS_GUIDES = {
+        '陽虚_腎': {
+          title: '腎陽虚（じんようきょ）傾向',
+          image: '体を内側から温める根本のエネルギー（腎陽）がやや不足し、腰や足元の冷え・だるさ、夜間のトイレなどが出やすい状態です。',
+          care: '冷たい飲食や生野菜を控え、生姜・ねぎ・黒豆・くるみ・根菜の温かい汁物をとりましょう。腰と足首を冷やさないことが大切です。',
+          acupoints: '【命門（GV4）】背骨のくぼみ ／ 【関元（CV4）】おへそから指4本分下 ／ 【太渓（KI3）】内くるぶし後ろのくぼみ',
+          kampo: [
+            { name: '八味地黄丸', note: '足腰の冷えやだるさ、夜間頻尿を伴う腎陽虚の代表的な処方です。' },
+            { name: '牛車腎気丸', note: '下半身の冷えや重だるさに加えて、むくみやしびれ感がある場合に検討されます。' }
+          ]
+        },
+        '気虚_脾': {
+          title: '脾気虚（ひきょ）傾向',
+          image: '食べたものから気（エネルギー）を作る「脾」の働きが疲れ気味で、食後の眠気や倦怠感、胃腸の弱さが出やすい状態です。',
+          care: '無理な運動や夜更かしを避け、まずは睡眠を確保しましょう。お米・山芋・かぼちゃ・鶏肉・豆類など消化に良い食材がおすすめです。',
+          acupoints: '【足三里（ST36）】ひざ外側下から指4本分下 ／ 【気海（CV6）】おへそから指2本分下',
+          kampo: [
+            { name: '六君子湯', note: '胃腸の働きを助け、食後の眠気や胃もたれ、食欲不振を整える代表処方です。' },
+            { name: '補中益気湯', note: '全身の倦怠感や気力低下が強く、夕方になるとぐったりするタイプに検討されます。' }
+          ]
+        },
+        '気滞_肝': {
+          title: '肝気鬱結（かんきうっけつ）傾向',
+          image: 'ストレスや緊張の影響で気のめぐりが滞りやすく、ため息・胸やおなかの張り・イライラや気分の波が出やすい状態です。',
+          care: '柑橘類・しそ・みょうが・ハーブティーなど香りの良いもので気の巡りを助けましょう。深呼吸や軽い散歩でこまめに気分転換を図りましょう。',
+          acupoints: '【太衝（LR3）】足の親指と人差し指の骨の間 ／ 【合谷（LI4）】手の甲の親指と人差し指の間 ／ 【内関（PC6）】手首内側',
+          kampo: [
+            { name: '加味逍遙散', note: '気の巡りを整えつつ血も補い、気分の波・イライラ・肩こりに幅広く用いられます。' },
+            { name: '四逆散', note: '緊張やストレスによる胸やおなかの張り、手足の冷えがあるときに検討されます。' }
+          ]
+        },
+        '血虚_肝': {
+          title: '肝血虚（かんけっきょ）傾向',
+          image: '目や筋肉・爪に栄養を届ける「肝の血」が不足しており、目の疲れやかすみ、立ちくらみ、足のつりやすさが出やすい状態です。',
+          care: 'スマホやPCによる目の酷使を控え、早めの就寝を心がけましょう。黒ごま・ほうれん草・にんじん・なつめ・赤身魚がおすすめです。',
+          acupoints: '【三陰交（SP6）】内くるぶしから指4本分上 ／ 【神門（HT7）】手首小指側 ／ 【太衝（LR3）】足甲',
+          kampo: [
+            { name: '当帰芍薬散', note: '血を補いながら余分な水分もさばき、立ちくらみや冷え・むくみがある場合に検討されます。' },
+            { name: '四物湯', note: '血を補う基本処方で、顔色の冴えなさや乾燥があるときにベースとなります。' }
+          ]
+        },
+        '血瘀_肝': {
+          title: '肝鬱血瘀（かんうっけつお）傾向',
+          image: '気と血のめぐりがともに滞りやすく、肩・首・腰などの決まった場所のコリや痛み、こわばりが出やすい状態です。',
+          care: '同じ姿勢を続けず、1時間に1回は肩甲骨や股関節を動かしましょう。湯船に浸かって温め、青魚・玉ねぎ・黒豆などを取り入れましょう。',
+          acupoints: '【合谷（LI4）】手甲 ／ 【太衝（LR3）】足甲 ／ 【肩井（GB21）】肩の中央',
+          kampo: [
+            { name: '桂枝茯苓丸', note: '滞った血の巡りを促す代表処方で、肩こり・頭重感・冷えがあるときに検討されます。' }
+          ]
+        },
+        '痰湿_脾': {
+          title: '脾虚湿困（ひきょしっこん）傾向',
+          image: '胃腸の水分代謝が追いつかず、余分な湿気がたまって雨の日の頭重感・夕方のむくみ・食後の重だるさが出やすい状態です。',
+          care: '甘いお菓子・脂っこい食事・冷たい飲み物を控えめにし、はと麦・小豆・海藻・きのこ類など水はけを助ける食材をとりましょう。',
+          acupoints: '【陰陵泉（SP9）】ひざ内側下 ／ 【足三里（ST36）】ひざ外側下 ／ 【天枢（ST25）】おへその両脇',
+          kampo: [
+            { name: '五苓散', note: '体内の水分バランスを整え、雨の日の頭重感やむくみに対応する代表処方です。' },
+            { name: '防已黄耆湯', note: '疲れやすく汗をかきやすい体質で、夕方の足のむくみがある場合に選ばれます。' }
+          ]
+        }
+      };
+
+      // 画面遷移・タブ管理
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      const modes = {
+        check: document.getElementById('mode-check'),
+        acupoint: document.getElementById('mode-acupoint'),
+        tongue: document.getElementById('mode-tongue'),
+        dict: document.getElementById('mode-dict')
+      };
+      const headerBadge = document.getElementById('header-badge');
+
+      let meridian3DInitialized = false;
+      let glb3DInitialized = false;
+
+      function switchMainTab(tabName) {
+        tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tabName));
+        Object.keys(modes).forEach((k) => modes[k].classList.toggle('hidden', k !== tabName));
+
+        if (tabName === 'check') headerBadge.textContent = '体質問診・全18問';
+        if (tabName === 'acupoint') {
+          headerBadge.textContent = '3D経絡・ツボ';
+          initMeridian3DOnce();
+        }
+        if (tabName === 'tongue') headerBadge.textContent = '舌診カメラ';
+        if (tabName === 'dict') headerBadge.textContent = 'ツボ辞典・五行';
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      tabButtons.forEach((b) => b.addEventListener('click', () => switchMainTab(b.dataset.tab)));
+
+      // スプラッシュ解除（確実に消えるようフェイルセーフ付き）
+      function revealApp() {
+        const logo = document.getElementById('splash-logo');
+        const overlay = document.getElementById('splash-overlay');
+        const mainReveal = document.getElementById('main-reveal');
+        if (logo) logo.classList.add('visible');
+        setTimeout(() => {
+          if (overlay) overlay.classList.add('fade-out');
+          if (mainReveal) mainReveal.classList.add('revealed');
+        }, 450);
+        setTimeout(() => {
+          if (overlay) overlay.style.display = 'none';
+        }, 1200);
+      }
+
+      if (document.readyState === 'complete') {
+        revealApp();
+      } else {
+        window.addEventListener('load', revealApp);
+        setTimeout(revealApp, 1500);
+      }
+
+      // ==================== 体質問診ロジック ====================
+      const screenStart = document.getElementById('screen-start');
+      const screenQuestion = document.getElementById('screen-question');
+      const screenTransition = document.getElementById('screen-transition');
+      const screenResult = document.getElementById('screen-result');
+
+      let currentStep = 0;
+      let stage1Answers = new Array(12).fill(null);
+      let stage2Questions = [];
+      let stage2Answers = new Array(6).fill(null);
+      let selectedZangs = ['腎', '脾'];
+      let latestRecommendedPoints = ['ST36', 'SP6', 'LI4'];
+
+      function showCheckScreen(target) {
+        [screenStart, screenQuestion, screenTransition, screenResult].forEach((s) => s.classList.add('hidden'));
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function getBaseMaxScores() {
+        const maxMap = { 陽虚: 0, 気虚: 0, 気滞: 0, 血虚: 0, 血瘀: 0, 痰湿: 0 };
+        STAGE1_QUESTIONS.forEach((q) => {
+          Object.entries(q.weights).forEach(([k, w]) => { maxMap[k] += w * 3; });
+        });
+        return maxMap;
+      }
+      const BASE_MAX_SCORES = getBaseMaxScores();
+
+      function evaluateStage1() {
+        const rawMap = { 陽虚: 0, 気虚: 0, 気滞: 0, 血虚: 0, 血瘀: 0, 痰湿: 0 };
+        const zangSeedMap = { 腎: 0, 脾: 0, 肝: 0, 心: 0, 肺: 0 };
+
+        STAGE1_QUESTIONS.forEach((q, idx) => {
+          const ans = stage1Answers[idx] ?? 0;
+          Object.entries(q.weights).forEach(([k, w]) => { rawMap[k] += ans * w; });
+          Object.entries(q.zangSeeds).forEach(([z, w]) => { zangSeedMap[z] += ans * w; });
+        });
+
+        const sortedBase = Object.keys(BASE_PATTERNS).map((key) => {
+          const raw = rawMap[key];
+          const max = BASE_MAX_SCORES[key];
+          const percent = max > 0 ? Math.round((raw / max) * 100) : 0;
+          return { ...BASE_PATTERNS[key], raw, max, percent };
+        }).sort((a, b) => (b.percent !== a.percent ? b.percent - a.percent : b.raw - a.raw));
+
+        const top1 = sortedBase[0];
+        const zangPriority = { 腎: 0, 脾: 0, 肝: 0, 心: 0, 肺: 0 };
+        top1.defaultZangs.forEach((z, i) => { zangPriority[z] += i === 0 ? 10 : 7; });
+        Object.keys(zangPriority).forEach((z) => { zangPriority[z] += zangSeedMap[z] * 0.5; });
+
+        const chosenZangs = Object.keys(zangPriority).sort((a, b) => zangPriority[b] - zangPriority[a]).slice(0, 2);
+        return { sortedBase, chosenZangs };
+      }
+
+      function buildStage2Questions(zangPair) {
+        const arr = [];
+        zangPair.forEach((zKey) => {
+          ZANG_QUESTIONS[zKey].questions.forEach((txt) => {
+            arr.push({ zangKey: zKey, zangLabel: ZANG_QUESTIONS[zKey].label, text: txt });
+          });
+        });
+        return arr;
+      }
+
+      function renderQuestion() {
+        const isStage1 = currentStep < 12;
+        headerBadge.textContent = `${currentStep + 1} / 18 問目`;
+        document.getElementById('q-counter').textContent = `質問 ${currentStep + 1} / 18`;
+        document.getElementById('progress-fill').style.width = `${((currentStep + 1) / 18) * 100}%`;
+        document.getElementById('q-num-label').textContent = `Q${currentStep + 1}.`;
+
+        let currentAns = null;
+        if (isStage1) {
+          document.getElementById('stage-pill').textContent = '第1段階: 基本体質バランス';
+          document.getElementById('q-text').textContent = STAGE1_QUESTIONS[currentStep].text;
+          currentAns = stage1Answers[currentStep];
+        } else {
+          const q = stage2Questions[currentStep - 12];
+          document.getElementById('stage-pill').textContent = `第2段階: 五臓深掘り（${q.zangLabel}）`;
+          document.getElementById('q-text').textContent = q.text;
+          currentAns = stage2Answers[currentStep - 12];
+        }
+
+        document.querySelectorAll('.choice-btn').forEach((btn) => {
+          btn.classList.toggle('is-selected', currentAns !== null && Number(btn.dataset.score) === currentAns);
+        });
+        document.getElementById('btn-prev-q').disabled = currentStep === 0;
+      }
+
+      function renderTransition() {
+        const { sortedBase, chosenZangs } = evaluateStage1();
+        selectedZangs = chosenZangs;
+        stage2Questions = buildStage2Questions(chosenZangs);
+
+        const chips = document.getElementById('transition-chips');
+        chips.innerHTML = `<span class="stage-pill">1位: ${sortedBase[0].label} ${sortedBase[0].percent}%</span>` +
+          (sortedBase[1].percent >= 25 ? `<span class="stage-pill">2位: ${sortedBase[1].label} ${sortedBase[1].percent}%</span>` : '');
+
+        document.getElementById('transition-zang-text').textContent =
+          `「${ZANG_QUESTIONS[chosenZangs[0]].label}」と「${ZANG_QUESTIONS[chosenZangs[1]].label}」のサイン（各3問・計6問）`;
+      }
+
+      function renderResults() {
+        headerBadge.textContent = '診断完了';
+        const { sortedBase } = evaluateStage1();
+        const zangResults = selectedZangs.map((zKey) => {
+          let raw = 0;
+          stage2Questions.forEach((q, idx) => {
+            if (q.zangKey === zKey) raw += stage2Answers[idx] ?? 0;
+          });
+          return { key: zKey, label: ZANG_QUESTIONS[zKey].label, theme: ZANG_QUESTIONS[zKey].theme, raw, max: 9, percent: Math.round((raw / 9) * 100) };
+        }).sort((a, b) => b.percent - a.percent);
+
+        const topBase = sortedBase[0];
+        const topZang = zangResults[0];
+        latestRecommendedPoints = topBase.recommendedPoints || ['ST36', 'SP6', 'LI4'];
+
+        const comboKey = `${topBase.key}_${topZang.key}`;
+        const guide = SYNTHESIS_GUIDES[comboKey] || SYNTHESIS_GUIDES[`${topBase.key}_${topBase.defaultZangs[0]}`] || {
+          title: `${topBase.label} × ${topZang.label} 傾向`,
+          image: `基本体質では「${topBase.shortTag}」の傾向が高く、五臓では「${topZang.label}（${topZang.theme}）」に揺らぎが出やすい状態です。`,
+          care: '冷えや睡眠不足、食べすぎを避け、温かい食事と深い呼吸で巡りとエネルギーを整えましょう。',
+          acupoints: '【足三里（ST36）】ひざ外側下 ／ 【三陰交（SP6）】内くるぶし上',
+          kampo: [{ name: '補中益気湯', note: '気力・体力の土台を整える代表的な処方例です。' }]
+        };
+
+        document.getElementById('result-title').textContent = `「${guide.title}」が見られます`;
+        document.getElementById('result-summary').textContent =
+          `基本体質で最も高い「${topBase.label}（${topBase.percent}%）」と、深掘りした五臓の「${topZang.label}（${topZang.percent}%）」が結びついた状態です。`;
+
+        document.getElementById('base-bars').innerHTML = sortedBase.map((item) => `
+          <div class="bar-row">
+            <div class="bar-top"><span>${item.label} <small style="opacity:0.7;">${item.shortTag}</small></span><span>${item.raw}/${item.max}点 · <b>${item.percent}%</b></span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${item.percent}%"></div></div>
+          </div>
+        `).join('');
+
+        document.getElementById('zang-bars').innerHTML = zangResults.map((z) => `
+          <div class="bar-row">
+            <div class="bar-top"><span>${z.label} <small style="opacity:0.7;">${z.theme}</small></span><span>${z.raw}/${z.max}点 · <b>${z.percent}%</b></span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${z.percent}%"></div></div>
+          </div>
+        `).join('');
+
+        document.getElementById('advice-image').textContent = guide.image;
+        document.getElementById('advice-care').textContent = guide.care;
+        document.getElementById('advice-acupoints').textContent = guide.acupoints;
+
+        document.getElementById('kampo-list').innerHTML = guide.kampo.map((k) => `
+          <div class="card-deep">
+            <div style="font-size:13px;font-weight:700;">${k.name}</div>
+            <div style="font-size:12px;color:var(--text-soft);margin-top:2px;">${k.note}</div>
+          </div>
+        `).join('');
+
+        document.getElementById('clipboard-buffer').value = [
+          '【Traditional Medicine.ai 体質・五臓バランス結果】',
+          `総合傾向: ${guide.title}`,
+          ...sortedBase.map((b) => `・${b.label}: ${b.percent}%`),
+          ...zangResults.map((z) => `・${z.label}: ${z.percent}%`)
+        ].join('\n');
+      }
+
+      document.getElementById('btn-start-check').addEventListener('click', () => {
+        currentStep = 0;
+        stage1Answers = new Array(12).fill(null);
+        stage2Answers = new Array(6).fill(null);
+        renderQuestion();
+        showCheckScreen(screenQuestion);
+      });
+
+      document.querySelectorAll('.choice-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const score = Number(btn.dataset.score);
+          if (currentStep < 12) stage1Answers[currentStep] = score;
+          else stage2Answers[currentStep - 12] = score;
+
+          if (currentStep < 11) {
+            currentStep++;
+            renderQuestion();
+          } else if (currentStep === 11) {
+            renderTransition();
+            showCheckScreen(screenTransition);
+          } else if (currentStep < 17) {
+            currentStep++;
+            renderQuestion();
+          } else {
+            renderResults();
+            showCheckScreen(screenResult);
+          }
+        });
+      });
+
+      document.getElementById('btn-prev-q').addEventListener('click', () => {
+        if (currentStep === 0) return;
+        if (currentStep === 12) {
+          renderTransition();
+          showCheckScreen(screenTransition);
+          return;
+        }
+        currentStep--;
+        renderQuestion();
+      });
+
+      document.getElementById('btn-to-stage2').addEventListener('click', () => {
+        stage2Answers = new Array(6).fill(null);
+        currentStep = 12;
+        renderQuestion();
+        showCheckScreen(screenQuestion);
+      });
+
+      document.getElementById('btn-back-to-q12').addEventListener('click', () => {
+        currentStep = 11;
+        renderQuestion();
+        showCheckScreen(screenQuestion);
+      });
+
+      document.getElementById('btn-restart-check').addEventListener('click', () => {
+        currentStep = 0;
+        stage1Answers = new Array(12).fill(null);
+        stage2Answers = new Array(6).fill(null);
+        headerBadge.textContent = '体質問診・全18問';
+        showCheckScreen(screenStart);
+      });
+
+      document.getElementById('btn-copy-result').addEventListener('click', () => {
+        const buf = document.getElementById('clipboard-buffer');
+        const toast = document.getElementById('copy-toast');
+        try {
+          buf.classList.remove('sr-only');
+          buf.select();
+          document.execCommand('copy');
+          buf.classList.add('sr-only');
+          toast.classList.remove('hidden');
+          setTimeout(() => toast.classList.add('hidden'), 2400);
+        } catch (e) {}
+      });
+
+      document.getElementById('btn-open-3d-from-result').addEventListener('click', () => {
+        switchMainTab('acupoint');
+        setTimeout(() => {
+          const targetPt = ACUPOINTS.find((p) => latestRecommendedPoints.includes(p.id)) || ACUPOINTS[0];
+          selectAcupoint(targetPt);
+        }, 120);
+      });
+
+      // ==================== 3D経絡・ツボビューア ====================
+      let mScene, mCamera, mRenderer, mRootGroup;
+      let mSkinGroup, mMeridianGroup, mPointGroup, mSkeletonGroup, mOrganGroup;
+      let mPointMeshes = [];
+      let mSelectedPoint = ACUPOINTS[0];
+      let mActiveMeridianFilter = null;
+      let mYaw = 0.0, mPitch = 0.08, mDist = 3.8;
+      let mTargetYaw = 0.0, mTargetPitch = 0.08, mTargetDist = 3.8;
+
+      function selectAcupoint(pt) {
+        mSelectedPoint = pt;
+        const m = MERIDIANS[pt.meridian];
+        document.getElementById('sp-meridian-badge').textContent = `${m.short}（${m.key}）`;
+        document.getElementById('sp-name').textContent = pt.name;
+        document.getElementById('sp-code').textContent = pt.code;
+        document.getElementById('sp-location').textContent = `【取穴部位】${pt.location}`;
+        document.getElementById('sp-indication').textContent = `【目安となる症状】${pt.indication}`;
+        document.getElementById('sp-massage').textContent = `【セルフケアのコツ】${pt.massage}`;
+
+        mPointMeshes.forEach((mesh) => {
+          const isSel = mesh.userData.point.id === pt.id;
+          mesh.scale.setScalar(isSel ? 1.45 : 1.0);
+        });
+      }
+
+      function buildHumanSilhouette() {
+        mSkinGroup = new THREE.Group();
+        const skinMat = new THREE.MeshPhongMaterial({
+          color: 0x93C5FD,
+          transparent: true,
+          opacity: 0.22,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        });
+        const wireMat = new THREE.MeshBasicMaterial({
+          color: 0x60A5FA,
+          transparent: true,
+          opacity: 0.14,
+          wireframe: true
+        });
+
+        const addPart = (geo, x, y, z, rx, ry, rz) => {
+          const m = new THREE.Mesh(geo, skinMat);
+          m.position.set(x, y, z);
+          if (rx) m.rotation.x = rx;
+          if (ry) m.rotation.y = ry;
+          if (rz) m.rotation.z = rz;
+          mSkinGroup.add(m);
+          const w = new THREE.Mesh(geo, wireMat);
+          w.position.copy(m.position);
+          w.rotation.copy(m.rotation);
+          mSkinGroup.add(w);
+        };
+
+        addPart(new THREE.SphereGeometry(0.18, 20, 16), 0, 1.58, 0.01);
+        addPart(new THREE.CylinderGeometry(0.085, 0.10, 0.20, 16), 0, 1.36, -0.01);
+        addPart(new THREE.CylinderGeometry(0.24, 0.18, 0.46, 20), 0, 1.04, 0);
+        addPart(new THREE.CylinderGeometry(0.18, 0.21, 0.34, 20), 0, 0.66, 0);
+
+        // 左腕（画面右側）
+        addPart(new THREE.CylinderGeometry(0.068, 0.056, 0.34, 14), -0.32, 1.12, 0.06, 0, 0, -0.24);
+        addPart(new THREE.CylinderGeometry(0.054, 0.044, 0.32, 14), -0.44, 0.82, 0.14, 0.2, 0, -0.16);
+        addPart(new THREE.SphereGeometry(0.055, 12, 10), -0.50, 0.64, 0.18);
+
+        // 右腕
+        addPart(new THREE.CylinderGeometry(0.068, 0.056, 0.34, 14), 0.32, 1.12, 0.06, 0, 0, 0.24);
+        addPart(new THREE.CylinderGeometry(0.054, 0.044, 0.32, 14), 0.44, 0.82, 0.14, 0.2, 0, 0.16);
+        addPart(new THREE.SphereGeometry(0.055, 12, 10), 0.50, 0.64, 0.18);
+
+        // 左脚・右脚
+        addPart(new THREE.CylinderGeometry(0.095, 0.072, 0.52, 16), -0.13, 0.24, 0.02);
+        addPart(new THREE.CylinderGeometry(0.070, 0.052, 0.54, 16), -0.14, -0.30, 0.01);
+        addPart(new THREE.BoxGeometry(0.11, 0.06, 0.24), -0.14, -0.59, 0.07);
+
+        addPart(new THREE.CylinderGeometry(0.095, 0.072, 0.52, 16), 0.13, 0.24, 0.02);
+        addPart(new THREE.CylinderGeometry(0.070, 0.052, 0.54, 16), 0.14, -0.30, 0.01);
+        addPart(new THREE.BoxGeometry(0.11, 0.06, 0.24), 0.14, -0.59, 0.07);
+
+        mRootGroup.add(mSkinGroup);
+      }
+
+      function buildSkeletonAndOrgans() {
+        mSkeletonGroup = new THREE.Group();
+        mSkeletonGroup.visible = false;
+        const boneMat = new THREE.MeshPhongMaterial({ color: 0xE2E8F0, transparent: true, opacity: 0.72 });
+        const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 1.15, 12), boneMat);
+        spine.position.set(0, 0.92, -0.07);
+        mSkeletonGroup.add(spine);
+        const pelvis = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.032, 10, 20), boneMat);
+        pelvis.position.set(0, 0.55, -0.02);
+        pelvis.rotation.x = Math.PI / 2.2;
+        mSkeletonGroup.add(pelvis);
+        mRootGroup.add(mSkeletonGroup);
+
+        mOrganGroup = new THREE.Group();
+        mOrganGroup.visible = false;
+        const heart = new THREE.Mesh(new THREE.SphereGeometry(0.065, 14, 12), new THREE.MeshPhongMaterial({ color: 0xF87171, transparent: true, opacity: 0.75 }));
+        heart.position.set(0.03, 1.14, 0.06);
+        const liver = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, 0.09), new THREE.MeshPhongMaterial({ color: 0x34D399, transparent: true, opacity: 0.75 }));
+        liver.position.set(-0.06, 0.98, 0.07);
+        const stomach = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 12), new THREE.MeshPhongMaterial({ color: 0xFBBF24, transparent: true, opacity: 0.75 }));
+        stomach.position.set(0.06, 0.95, 0.07);
+        mOrganGroup.add(heart, liver, stomach);
+        mRootGroup.add(mOrganGroup);
+      }
+
+      function buildMeridiansAndPoints() {
+        mMeridianGroup = new THREE.Group();
+        mPointGroup = new THREE.Group();
+        mPointMeshes = [];
+
+        MERIDIAN_PATHS.forEach((pathObj) => {
+          const mInfo = MERIDIANS[pathObj.meridian];
+          const colorNum = parseInt(mInfo.color.replace('#', ''), 16);
+          const vecsLeft = pathObj.pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]));
+          const curveLeft = new THREE.CatmullRomCurve3(vecsLeft);
+          const tubeGeoLeft = new THREE.TubeGeometry(curveLeft, 24, 0.0075, 8, false);
+          const mat = new THREE.MeshBasicMaterial({ color: colorNum, transparent: true, opacity: 0.85 });
+          const meshLeft = new THREE.Mesh(tubeGeoLeft, mat);
+          meshLeft.userData = { meridian: pathObj.meridian };
+          mMeridianGroup.add(meshLeft);
+
+          if (pathObj.meridian !== 'GV' && pathObj.meridian !== 'CV') {
+            const vecsRight = pathObj.pts.map((p) => new THREE.Vector3(-p[0], p[1], p[2]));
+            const curveRight = new THREE.CatmullRomCurve3(vecsRight);
+            const tubeGeoRight = new THREE.TubeGeometry(curveRight, 24, 0.0075, 8, false);
+            const meshRight = new THREE.Mesh(tubeGeoRight, mat);
+            meshRight.userData = { meridian: pathObj.meridian };
+            mMeridianGroup.add(meshRight);
+          }
+        });
+
+        const sphereGeo = new THREE.SphereGeometry(0.024, 14, 12);
+        ACUPOINTS.forEach((pt) => {
+          const mInfo = MERIDIANS[pt.meridian];
+          const colorNum = parseInt(mInfo.color.replace('#', ''), 16);
+          const pMat = new THREE.MeshBasicMaterial({ color: colorNum });
+          const mesh = new THREE.Mesh(sphereGeo, pMat);
+          mesh.position.set(pt.pos[0], pt.pos[1], pt.pos[2]);
+          mesh.userData = { point: pt };
+          mPointGroup.add(mesh);
+          mPointMeshes.push(mesh);
+
+          if (pt.meridian !== 'GV' && pt.meridian !== 'CV') {
+            const mirrorMesh = new THREE.Mesh(sphereGeo, pMat);
+            mirrorMesh.position.set(-pt.pos[0], pt.pos[1], pt.pos[2]);
+            mirrorMesh.userData = { point: pt };
+            mPointGroup.add(mirrorMesh);
+            mPointMeshes.push(mirrorMesh);
+          }
+        });
+
+        mRootGroup.add(mMeridianGroup, mPointGroup);
+      }
+
+      function applyMeridianFilter(mKey) {
+        mActiveMeridianFilter = mKey;
+        document.querySelectorAll('.meridian-pill').forEach((pill) => {
+          pill.classList.toggle('active', mKey !== null && pill.dataset.meridian === mKey);
+        });
+
+        mMeridianGroup.children.forEach((mesh) => {
+          const match = mKey === null || mesh.userData.meridian === mKey;
+          mesh.visible = match;
+        });
+
+        mPointMeshes.forEach((mesh) => {
+          const match = mKey === null || mesh.userData.point.meridian === mKey;
+          mesh.visible = match;
+        });
+      }
+
+      function initMeridian3DOnce() {
+        if (meridian3DInitialized) return;
+        meridian3DInitialized = true;
+
+        const container = document.getElementById('viewer-wrapper-3d');
+        const width = container.clientWidth || 460;
+        const height = container.clientHeight || 390;
+
+        mScene = new THREE.Scene();
+        mCamera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+        mRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        mRenderer.setSize(width, height);
+        mRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        container.insertBefore(mRenderer.domElement, container.firstChild);
+
+        const amb = new THREE.AmbientLight(0xffffff, 0.9);
+        const dir1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        dir1.position.set(2, 4, 3);
+        const dir2 = new THREE.DirectionalLight(0x93c5fd, 0.5);
+        dir2.position.set(-3, 2, -2);
+        mScene.add(amb, dir1, dir2);
+
+        mRootGroup = new THREE.Group();
+        mRootGroup.position.y = -0.35;
+        mScene.add(mRootGroup);
+
+        buildHumanSilhouette();
+        buildSkeletonAndOrgans();
+        buildMeridiansAndPoints();
+        selectAcupoint(ACUPOINTS[0]);
+
+        // 経絡ピル生成
+        const pillsWrap = document.getElementById('meridian-pills');
+        pillsWrap.innerHTML = Object.values(MERIDIANS).map((m) => `
+          <button type="button" class="meridian-pill" data-meridian="${m.key}">
+            <span class="m-dot" style="background:${m.color}"></span>
+            <span>${m.short}</span>
+          </button>
+        `).join('');
+
+        pillsWrap.querySelectorAll('.meridian-pill').forEach((pill) => {
+          pill.addEventListener('click', () => {
+            const k = pill.dataset.meridian;
+            applyMeridianFilter(mActiveMeridianFilter === k ? null : k);
+          });
+        });
+
+        document.getElementById('btn-all-meridians').addEventListener('click', () => applyMeridianFilter(null));
+
+        // レイヤーチップ
+        document.querySelectorAll('.layer-chip').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            chip.classList.toggle('active');
+            const active = chip.classList.contains('active');
+            const layer = chip.dataset.layer;
+            if (layer === 'skin' && mSkinGroup) mSkinGroup.visible = active;
+            if (layer === 'meridian' && mMeridianGroup) mMeridianGroup.visible = active;
+            if (layer === 'acupoint' && mPointGroup) mPointGroup.visible = active;
+            if (layer === 'skeleton' && mSkeletonGroup) mSkeletonGroup.visible = active;
+            if (layer === 'organ' && mOrganGroup) mOrganGroup.visible = active;
+          });
+        });
+
+        // カメラ視点プリセット
+        document.querySelectorAll('[data-cam]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const view = btn.dataset.cam;
+            if (view === 'front') mTargetYaw = 0;
+            if (view === 'side') mTargetYaw = Math.PI / 2;
+            if (view === 'back') mTargetYaw = Math.PI;
+          });
+        });
+
+        // ポインター操作（回転＆タップ選択）
+        let isDragging = false, movedDist = 0, prevX = 0, prevY = 0;
+        const raycaster = new THREE.Raycaster();
+        const pointerNDC = new THREE.Vector2();
+
+        container.addEventListener('pointerdown', (e) => {
+          if (e.target.closest('button')) return;
+          isDragging = true;
+          movedDist = 0;
+          prevX = e.clientX;
+          prevY = e.clientY;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+          if (!isDragging) return;
+          const dx = e.clientX - prevX;
+          const dy = e.clientY - prevY;
+          movedDist += Math.hypot(dx, dy);
+          mTargetYaw += dx * 0.012;
+          mTargetPitch = Math.max(-0.9, Math.min(1.1, mTargetPitch + dy * 0.01));
+          prevX = e.clientX;
+          prevY = e.clientY;
+        });
+
+        window.addEventListener('pointerup', (e) => {
+          if (!isDragging) return;
+          isDragging = false;
+          if (movedDist < 6) {
+            const rect = mRenderer.domElement.getBoundingClientRect();
+            pointerNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            pointerNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(pointerNDC, mCamera);
+            const hits = raycaster.intersectObjects(mPointMeshes.filter((m) => m.visible), false);
+            if (hits.length > 0 && hits[0].object.userData.point) {
+              selectAcupoint(hits[0].object.userData.point);
+            }
+          }
+        });
+
+        container.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          mTargetDist = Math.max(1.8, Math.min(6.2, mTargetDist + e.deltaY * 0.002));
+        }, { passive: false });
+
+        function animate3D() {
+          requestAnimationFrame(animate3D);
+          mYaw += (mTargetYaw - mYaw) * 0.14;
+          mPitch += (mTargetPitch - mPitch) * 0.14;
+          mDist += (mTargetDist - mDist) * 0.14;
+
+          const centerY = 0.52;
+          mCamera.position.x = mDist * Math.sin(mYaw) * Math.cos(mPitch);
+          mCamera.position.y = centerY + mDist * Math.sin(mPitch);
+          mCamera.position.z = mDist * Math.cos(mYaw) * Math.cos(mPitch);
+          mCamera.lookAt(0, centerY, 0);
+
+          mRenderer.render(mScene, mCamera);
+        }
+        animate3D();
+      }
+
+      // ==================== 現代解剖3D（.glb 読込） ====================
+      let gScene, gCamera, gRenderer, gModelGroup = null, gSelectedMesh = null;
+      let gYaw = 0, gPitch = 0.1, gDist = 3.0;
+      const gHiddenMeshes = [];
+
+      function initGlb3DOnce() {
+        if (glb3DInitialized) return;
+        glb3DInitialized = true;
+
+        const container = document.getElementById('viewer-wrapper-glb');
+        const width = container.clientWidth || 460;
+        const height = container.clientHeight || 390;
+
+        gScene = new THREE.Scene();
+        gCamera = new THREE.PerspectiveCamera(45, width / height, 0.05, 200);
+        gRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        gRenderer.setSize(width, height);
+        gRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        container.insertBefore(gRenderer.domElement, container.firstChild);
+
+        gScene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        const dLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        dLight.position.set(3, 5, 4);
+        gScene.add(dLight);
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let dragging = false, moved = 0, px = 0, py = 0;
+
+        container.addEventListener('pointerdown', (e) => {
+          if (e.target.closest('button')) return;
+          dragging = true; moved = 0; px = e.clientX; py = e.clientY;
+        });
+        window.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          const dx = e.clientX - px, dy = e.clientY - py;
+          moved += Math.hypot(dx, dy);
+          gYaw += dx * 0.012;
+          gPitch = Math.max(-1.2, Math.min(1.2, gPitch + dy * 0.01));
+          px = e.clientX; py = e.clientY;
+        });
+        window.addEventListener('pointerup', (e) => {
+          if (!dragging) return;
+          dragging = false;
+          if (moved < 6 && gModelGroup) {
+            const rect = gRenderer.domElement.getBoundingClientRect();
+            pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(pointer, gCamera);
+            const meshes = [];
+            gModelGroup.traverse((obj) => { if (obj.isMesh && obj.visible) meshes.push(obj); });
+            const hits = raycaster.intersectObjects(meshes, false);
+            if (hits.length > 0) {
+              gSelectedMesh = hits[0].object;
+              document.getElementById('glb-part-info').textContent = `選択パーツ: ${gSelectedMesh.name || '(名称なし)'}`;
+            }
+          }
+        });
+
+        function animateGlb() {
+          requestAnimationFrame(animateGlb);
+          gCamera.position.x = gDist * Math.sin(gYaw) * Math.cos(gPitch);
+          gCamera.position.y = gDist * Math.sin(gPitch);
+          gCamera.position.z = gDist * Math.cos(gYaw) * Math.cos(gPitch);
+          gCamera.lookAt(0, 0, 0);
+          gRenderer.render(gScene, gCamera);
+        }
+        animateGlb();
+      }
+
+      function loadGlbArrayBuffer(arrayBuffer, fileName) {
+        initGlb3DOnce();
+        const statusEl = document.getElementById('glb-status-text');
+        statusEl.textContent = `${fileName} を読み込み中...`;
+
+        const loader = new THREE.GLTFLoader();
+        if (typeof THREE.DRACOLoader === 'function') {
+          const dracoLoader = new THREE.DRACOLoader();
+          dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
+          loader.setDRACOLoader(dracoLoader);
+        }
+
+        loader.parse(arrayBuffer, '', (gltf) => {
+          if (gModelGroup) gScene.remove(gModelGroup);
+          gModelGroup = gltf.scene;
+
+          const box = new THREE.Box3().setFromObject(gModelGroup);
+          const size = box.getSize(new THREE.Vector3());
+          const center = box.getCenter(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z) || 1;
+          const scale = 1.8 / maxDim;
+
+          gModelGroup.scale.setScalar(scale);
+          gModelGroup.position.sub(center.multiplyScalar(scale));
+          gScene.add(gModelGroup);
+
+          gYaw = 0; gPitch = 0.1; gDist = 3.0;
+          gHiddenMeshes.length = 0;
+          statusEl.textContent = `読み込み完了: ${fileName}`;
+        }, (err) => {
+          statusEl.textContent = `読み込みエラー: ${err && err.message ? err.message : '対応形式を確認してください'}`;
+        });
+      }
+
+      document.getElementById('submode-meridian').addEventListener('click', () => {
+        document.getElementById('submode-meridian').classList.add('active');
+        document.getElementById('submode-anatomy').classList.remove('active');
+        document.getElementById('panel-meridian-3d').classList.remove('hidden');
+        document.getElementById('panel-anatomy-3d').classList.add('hidden');
+        initMeridian3DOnce();
+      });
+
+      document.getElementById('submode-anatomy').addEventListener('click', () => {
+        document.getElementById('submode-anatomy').classList.add('active');
+        document.getElementById('submode-meridian').classList.remove('active');
+        document.getElementById('panel-anatomy-3d').classList.remove('hidden');
+        document.getElementById('panel-meridian-3d').classList.add('hidden');
+        initGlb3DOnce();
+      });
+
+      document.getElementById('glb-file-input').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => loadGlbArrayBuffer(ev.target.result, file.name);
+        reader.readAsArrayBuffer(file);
+      });
+
+      document.getElementById('btn-glb-hide-selected').addEventListener('click', () => {
+        if (gSelectedMesh) {
+          gSelectedMesh.visible = false;
+          gHiddenMeshes.push(gSelectedMesh);
+          gSelectedMesh = null;
+          document.getElementById('glb-part-info').textContent = '選択パーツを非表示にしました。';
+        }
+      });
+
+      document.getElementById('btn-glb-reset-parts').addEventListener('click', () => {
+        gHiddenMeshes.forEach((m) => { m.visible = true; });
+        gHiddenMeshes.length = 0;
+        document.getElementById('glb-part-info').textContent = '非表示パーツをすべて表示に戻しました。';
+      });
+
+      document.getElementById('btn-glb-reset-cam').addEventListener('click', () => {
+        gYaw = 0; gPitch = 0.1; gDist = 3.0;
+      });
+
+      // ==================== 舌診カメラ ====================
+      let tongueStream = null;
+      const videoEl = document.getElementById('tongue-video');
+      const imgEl = document.getElementById('tongue-preview-img');
+      const placeholderEl = document.getElementById('tongue-placeholder');
+
+      function analyzeTongueSource(sourceEl) {
+        const canvas = document.getElementById('tongue-analysis-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 160;
+        canvas.height = 120;
+        ctx.drawImage(sourceEl, 0, 0, canvas.width, canvas.height);
+
+        const frame = ctx.getImageData(55, 35, 50, 50).data;
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        for (let i = 0; i < frame.length; i += 4) {
+          rSum += frame[i]; gSum += frame[i + 1]; bSum += frame[i + 2]; count++;
+        }
+        const r = rSum / count, g = gSum / count, b = bSum / count;
+        const brightness = (r + g + b) / 3;
+        const redness = r - (g + b) / 2;
+
+        let colorLabel = '淡紅舌（健康的なピンク系）の目安';
+        if (redness > 36) colorLabel = '紅舌・暗赤系（熱や巡りの滞りサイン）';
+        else if (redness < 14) colorLabel = '淡白舌系（気虚・血虚・冷えサイン）';
+
+        let coatLabel = '薄白苔の目安';
+        if (brightness > 165) coatLabel = '白苔やや厚め（冷え・湿気・胃腸の疲れサイン）';
+        else if (brightness < 85) coatLabel = '苔少なめ・乾燥傾向（うるおい・血不足サイン）';
+
+        document.getElementById('tm-color').textContent = colorLabel;
+        document.getElementById('tm-coat').textContent = coatLabel;
+        document.getElementById('tm-comment').textContent =
+          `中央領域の平均RGB（R:${Math.round(r)}, G:${Math.round(g)}, B:${Math.round(b)}）から算出した目安です。体質問診の結果とあわせて確認してみてください。`;
+        document.getElementById('tongue-result-card').classList.remove('hidden');
+      }
+
+      document.getElementById('btn-start-camera').addEventListener('click', async () => {
+        const msgEl = document.getElementById('tongue-camera-msg');
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            msgEl.textContent = 'この環境ではカメラAPIが使えないため、「写真を選ぶ」をご利用ください。';
+            return;
+          }
+          tongueStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+          videoEl.srcObject = tongueStream;
+          videoEl.classList.remove('hidden');
+          imgEl.classList.add('hidden');
+          placeholderEl.classList.add('hidden');
+          document.getElementById('btn-capture-tongue').disabled = false;
+          msgEl.textContent = 'カメラ起動中。舌を枠内に合わせて「撮影して解析」を押してください。';
+        } catch (err) {
+          msgEl.textContent = 'カメラ権限が許可されませんでした。「写真を選ぶ」からも解析できます。';
+        }
+      });
+
+      document.getElementById('btn-capture-tongue').addEventListener('click', () => {
+        if (!tongueStream) return;
+        const snapCanvas = document.createElement('canvas');
+        snapCanvas.width = videoEl.videoWidth || 640;
+        snapCanvas.height = videoEl.videoHeight || 480;
+        snapCanvas.getContext('2d').drawImage(videoEl, 0, 0, snapCanvas.width, snapCanvas.height);
+        imgEl.src = snapCanvas.toDataURL('image/jpeg', 0.9);
+        imgEl.classList.remove('hidden');
+        videoEl.classList.add('hidden');
+        analyzeTongueSource(imgEl);
+      });
+
+      document.getElementById('tongue-file-input').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          imgEl.onload = () => analyzeTongueSource(imgEl);
+          imgEl.src = ev.target.result;
+          imgEl.classList.remove('hidden');
+          videoEl.classList.add('hidden');
+          placeholderEl.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // ==================== ツボ辞典・五行 ====================
+      let dictSelectedMeridian = 'ALL';
+
+      function renderDictFilterButtons() {
+        const wrap = document.getElementById('dict-meridian-filter');
+        const items = [{ key: 'ALL', short: 'すべて' }, ...Object.values(MERIDIANS)];
+        wrap.innerHTML = items.map((m) => `
+          <button type="button" class="meridian-pill ${dictSelectedMeridian === m.key ? 'active' : ''}" data-dict-m="${m.key}">
+            ${m.color ? `<span class="m-dot" style="background:${m.color}"></span>` : ''}
+            <span>${m.short}</span>
+          </button>
+        `).join('');
+
+        wrap.querySelectorAll('[data-dict-m]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            dictSelectedMeridian = btn.dataset.dictM;
+            renderDictFilterButtons();
+            renderDictPoints();
+          });
+        });
+      }
+
+      function renderDictPoints() {
+        const q = (document.getElementById('dict-search-input').value || '').trim().toLowerCase();
+        const listEl = document.getElementById('dict-points-container');
+
+        const filtered = ACUPOINTS.filter((pt) => {
+          const mInfo = MERIDIANS[pt.meridian];
+          const matchM = dictSelectedMeridian === 'ALL' || pt.meridian === dictSelectedMeridian;
+          if (!matchM) return false;
+          if (!q) return true;
+          const hay = `${pt.name} ${pt.code} ${mInfo.name} ${mInfo.short} ${pt.location} ${pt.indication}`.toLowerCase();
+          return hay.includes(q);
+        });
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = `<div class="card-deep" style="font-size:12px;">該当するツボが見つかりませんでした。検索ワードを変えてみてください。</div>`;
+          return;
+        }
+
+        listEl.innerHTML = filtered.map((pt) => {
+          const mInfo = MERIDIANS[pt.meridian];
+          return `
+            <div class="point-row-card" data-jump-point="${pt.id}">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="stage-pill">${mInfo.short}</span>
+                <span style="font-size:11px;font-weight:700;color:var(--accent-sky);">${pt.code} · タップで3D表示</span>
+              </div>
+              <div style="font-size:15px;font-weight:700;margin-top:6px;">${pt.name}</div>
+              <div style="font-size:12px;color:var(--text-soft);margin-top:4px;">${pt.location}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">目安: ${pt.indication}</div>
+            </div>
+          `;
+        }).join('');
+
+        listEl.querySelectorAll('[data-jump-point]').forEach((card) => {
+          card.addEventListener('click', () => {
+            const pt = ACUPOINTS.find((p) => p.id === card.dataset.jumpPoint);
+            switchMainTab('acupoint');
+            setTimeout(() => {
+              if (pt) selectAcupoint(pt);
+            }, 120);
+          });
+        });
+      }
+
+      document.getElementById('dict-search-input').addEventListener('input', renderDictPoints);
+
+      document.getElementById('submode-dict-list').addEventListener('click', () => {
+        document.getElementById('submode-dict-list').classList.add('active');
+        document.getElementById('submode-gogyo').classList.remove('active');
+        document.getElementById('panel-dict-list').classList.remove('hidden');
+        document.getElementById('panel-gogyo').classList.add('hidden');
+      });
+
+      document.getElementById('submode-gogyo').addEventListener('click', () => {
+        document.getElementById('submode-gogyo').classList.add('active');
+        document.getElementById('submode-dict-list').classList.remove('active');
+        document.getElementById('panel-gogyo').classList.remove('hidden');
+        document.getElementById('panel-dict-list').classList.add('hidden');
+      });
+
+      renderDictFilterButtons();
+      renderDictPoints();
+    })();
+  </script>
+</body>
+</html>
