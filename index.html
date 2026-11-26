@@ -7,6 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
   <style>
     :root {
       --bg-lapis-deep: #18426E;
@@ -595,6 +598,82 @@
       margin-top: 8px;
     }
 
+    /* ==================== 3D Startup.glb ビューア ==================== */
+    .glb-viewer-stage {
+      position: relative;
+      width: 100%;
+      height: 410px;
+      background: radial-gradient(circle at 50% 35%, #1D4D7E 0%, #0D223A 100%);
+      border-radius: var(--radius-xl);
+      border: 1.5px solid var(--border-strong);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .glb-viewer-stage.drag-over {
+      border-color: var(--accent-mint);
+      box-shadow: inset 0 0 0 2px var(--accent-mint);
+    }
+
+    .glb-viewer-stage canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .glb-overlay-msg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      gap: 8px;
+      pointer-events: none;
+      color: var(--text-soft);
+      font-size: 12px;
+      z-index: 4;
+    }
+
+    .glb-hud-bottom {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .glb-hud-btns {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      pointer-events: auto;
+    }
+
+    .hud-pill-btn {
+      border: 1px solid rgba(255, 255, 255, 0.30);
+      background-color: rgba(13, 34, 58, 0.84);
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 5px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .hud-pill-btn:hover {
+      background-color: #FFFFFF;
+      color: var(--bg-lapis);
+    }
+
     .meridian-scroll {
       display: flex;
       flex-wrap: wrap;
@@ -835,7 +914,7 @@
       <span class="splash-dot"></span>
       <span>Traditional Medicine.ai</span>
     </div>
-    <div id="splash-sub" class="splash-sub">EAST ASIAN MEDICINE &amp; 2D MERIDIAN ATLAS</div>
+    <div id="splash-sub" class="splash-sub">EAST ASIAN MEDICINE &amp; ANATOMY ATLAS</div>
   </div>
 
   <div id="main-reveal" class="main-reveal">
@@ -854,7 +933,7 @@
 
         <nav class="main-tabs" aria-label="メイン機能切り替え">
           <button type="button" id="tab-check" class="tab-btn active" data-tab="check" data-i18n="tab_check">体質問診</button>
-          <button type="button" id="tab-acupoint" class="tab-btn" data-tab="acupoint" data-i18n="tab_acupoint">2D解剖・経絡</button>
+          <button type="button" id="tab-acupoint" class="tab-btn" data-tab="acupoint" data-i18n="tab_acupoint">解剖・経絡</button>
           <button type="button" id="tab-tongue" class="tab-btn" data-tab="tongue" data-i18n="tab_tongue">舌診カメラ</button>
           <button type="button" id="tab-dict" class="tab-btn" data-tab="dict" data-i18n="tab_dict">ツボ辞典・五行</button>
         </nav>
@@ -1017,50 +1096,97 @@
         </section>
       </div>
 
-      <!-- ==================== 2. 2D解剖・経絡・ツボアトラス ==================== -->
+      <!-- ==================== 2. 解剖・経絡（2Dアトラス ＋ 3D Startup.glb） ==================== -->
       <section id="mode-acupoint" class="screen hidden">
         <div class="stack-md">
-          <div class="card-box stack-sm">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 12px; font-weight: 700; color: var(--accent-sky);" data-i18n="meridian_filter_label">十四経脈フィルター</span>
-              <button type="button" id="btn-all-meridians" class="lang-toggle-btn" data-i18n="btn_all_meridians">全経脈表示</button>
-            </div>
-            <div id="meridian-pills" class="meridian-scroll"></div>
+          <div class="sub-mode-bar">
+            <button type="button" id="submode-atlas-2d" class="sub-mode-btn active" data-i18n="sub_atlas_2d">2D解剖・経絡図</button>
+            <button type="button" id="submode-atlas-3d" class="sub-mode-btn" data-i18n="sub_atlas_3d">3D解剖（Startup.glb）</button>
           </div>
 
-          <div class="atlas-stage-card">
-            <div class="atlas-toolbar-top">
-              <div class="view-switch">
-                <button type="button" id="btn-view-front" class="view-btn active" data-i18n="view_front">前面</button>
-                <button type="button" id="btn-view-back" class="view-btn" data-i18n="view_back">背面</button>
+          <!-- 2Dアトラスパネル -->
+          <div id="panel-atlas-2d" class="stack-md">
+            <div class="card-box stack-sm">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--accent-sky);" data-i18n="meridian_filter_label">十四経脈フィルター</span>
+                <button type="button" id="btn-all-meridians" class="lang-toggle-btn" data-i18n="btn_all_meridians">全経脈表示</button>
               </div>
-              <div class="layer-toggles">
-                <button type="button" class="layer-chip active" data-layer="muscle" data-i18n="layer_muscle">筋肉</button>
-                <button type="button" class="layer-chip active" data-layer="skeleton" data-i18n="layer_skeleton">骨格</button>
-                <button type="button" class="layer-chip active" data-layer="organ" data-i18n="layer_organ">五臓</button>
-                <button type="button" class="layer-chip active" data-layer="meridian" data-i18n="layer_meridian">経絡線</button>
-                <button type="button" class="layer-chip active" data-layer="acupoint" data-i18n="layer_acupoint">ツボ</button>
-              </div>
+              <div id="meridian-pills" class="meridian-scroll"></div>
             </div>
 
-            <div class="atlas-svg-wrap" id="atlas-svg-wrap">
-              <!-- 高精細2D SVG解剖＆経絡図をJSで描画 -->
+            <div class="atlas-stage-card">
+              <div class="atlas-toolbar-top">
+                <div class="view-switch">
+                  <button type="button" id="btn-view-front" class="view-btn active" data-i18n="view_front">前面</button>
+                  <button type="button" id="btn-view-back" class="view-btn" data-i18n="view_back">背面</button>
+                </div>
+                <div class="layer-toggles">
+                  <button type="button" class="layer-chip active" data-layer="muscle" data-i18n="layer_muscle">筋肉</button>
+                  <button type="button" class="layer-chip active" data-layer="skeleton" data-i18n="layer_skeleton">骨格</button>
+                  <button type="button" class="layer-chip active" data-layer="organ" data-i18n="layer_organ">五臓</button>
+                  <button type="button" class="layer-chip active" data-layer="meridian" data-i18n="layer_meridian">経絡線</button>
+                  <button type="button" class="layer-chip active" data-layer="acupoint" data-i18n="layer_acupoint">ツボ</button>
+                </div>
+              </div>
+
+              <div class="atlas-svg-wrap" id="atlas-svg-wrap"></div>
+              <div class="atlas-hint" data-i18n="atlas_hint">ツボの点をタップすると、下のカードに取穴部位とセルフケアが表示されます</div>
             </div>
 
-            <div class="atlas-hint" data-i18n="atlas_hint">ツボの点をタップすると、下のカードに取穴部位とセルフケアが表示されます</div>
+            <div id="selected-point-card" class="card-box stack-sm">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span id="sp-meridian-badge" class="stage-pill">肺経（LU）</span>
+                  <h3 id="sp-name" style="font-size: 17px; font-weight: 700; margin-top: 6px; color: #FFFFFF;">太淵（たいえん）</h3>
+                </div>
+                <span id="sp-code" style="font-size: 13px; font-weight: 700; color: var(--accent-sky); background: var(--bg-surface-alt); border: 1px solid var(--border-subtle); padding: 4px 10px; border-radius: 8px;">LU9</span>
+              </div>
+              <p id="sp-location" style="font-size: 12px; color: var(--text-soft);"></p>
+              <p id="sp-indication" style="font-size: 12px; color: var(--text-soft);"></p>
+              <div class="card-deep" style="font-size: 12px; color: var(--accent-mint); font-weight: 600;" id="sp-massage"></div>
+            </div>
           </div>
 
-          <div id="selected-point-card" class="card-box stack-sm">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <span id="sp-meridian-badge" class="stage-pill">肺経（LU）</span>
-                <h3 id="sp-name" style="font-size: 17px; font-weight: 700; margin-top: 6px; color: #FFFFFF;">太淵（たいえん）</h3>
+          <!-- 3D Startup.glb ビューアパネル -->
+          <div id="panel-atlas-3d" class="stack-md hidden">
+            <div class="card-box stack-sm">
+              <div style="font-size: 14px; font-weight: 700;" data-i18n="glb_title">Z-Anatomy 3Dビューア（Startup.glb）</div>
+              <p style="font-size: 12px; color: var(--text-soft);" data-i18n="glb_desc">
+                GitHubの同じフォルダに配置した <code>Startup.glb</code> を読み込むか、手元の <code>.glb / .gltf</code> ファイルを選択・ドロップして3D表示できます。
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" id="btn-load-server-glb" class="btn-primary" style="width: auto; padding: 10px 14px; font-size: 12px;" data-i18n="btn_load_server_glb">同階層の Startup.glb を読込</button>
+                <label class="btn-secondary" style="width: auto; padding: 10px 14px; font-size: 12px; cursor: pointer;">
+                  <span data-i18n="btn_pick_glb">手元の .glb を選択</span>
+                  <input type="file" id="glb-file-input" accept=".glb,.gltf" class="sr-only" />
+                </label>
               </div>
-              <span id="sp-code" style="font-size: 13px; font-weight: 700; color: var(--accent-sky); background: var(--bg-surface-alt); border: 1px solid var(--border-subtle); padding: 4px 10px; border-radius: 8px;">LU9</span>
+              <div id="glb-status-text" style="font-size: 11px; color: var(--accent-sky);" data-i18n="glb_status_idle">
+                待機中：上のボタンから読み込むか、下のビューアへ .glb をドロップしてください。
+              </div>
             </div>
-            <p id="sp-location" style="font-size: 12px; color: var(--text-soft);"></p>
-            <p id="sp-indication" style="font-size: 12px; color: var(--text-soft);"></p>
-            <div class="card-deep" style="font-size: 12px; color: var(--accent-mint); font-weight: 600;" id="sp-massage"></div>
+
+            <div class="glb-viewer-stage" id="glb-viewer-stage">
+              <div class="glb-overlay-msg" id="glb-overlay-msg">
+                <div style="font-size: 13px; font-weight: 700; color: #FFFFFF;" data-i18n="glb_empty_title">3Dモデル未読み込み</div>
+                <div data-i18n="glb_empty_desc">「Startup.glb を読込」または「手元の .glb を選択」を押してください</div>
+              </div>
+              <div class="glb-hud-bottom">
+                <div class="glb-hud-btns">
+                  <button type="button" class="hud-pill-btn" id="btn-glb-zoom-in">＋</button>
+                  <button type="button" class="hud-pill-btn" id="btn-glb-zoom-out">－</button>
+                  <button type="button" class="hud-pill-btn" id="btn-glb-cam-reset" data-i18n="glb_cam_reset">視点リセット</button>
+                </div>
+                <div class="glb-hud-btns">
+                  <button type="button" class="hud-pill-btn" id="btn-glb-hide-part" data-i18n="glb_hide_part">選択パーツを隠す</button>
+                  <button type="button" class="hud-pill-btn" id="btn-glb-restore-parts" data-i18n="glb_restore_parts">すべて戻す</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="glb-part-info" class="card-deep" style="font-size: 12px; color: var(--text-soft);" data-i18n="glb_part_placeholder">
+              ドラッグで回転・スクロールで拡大縮小。モデル上のパーツをタップすると名称がここに表示されます。
+            </div>
           </div>
         </div>
       </section>
@@ -1152,11 +1278,11 @@
       const UI_TEXT = {
         ja: {
           tab_check: '体質問診',
-          tab_acupoint: '2D解剖・経絡',
+          tab_acupoint: '解剖・経絡',
           tab_tongue: '舌診カメラ',
           tab_dict: 'ツボ辞典・五行',
           badge_check: '体質問診・全18問',
-          badge_acupoint: '2D解剖・経絡図',
+          badge_acupoint: '2D / 3D 解剖・経絡',
           badge_tongue: '舌診カメラ',
           badge_dict: 'ツボ辞典・五行',
           hero_eyebrow: '東洋医学セルフケア・問診ガイド',
@@ -1196,6 +1322,8 @@
           copy_toast: '問診結果をクリップボードにコピーしました',
           btn_copy_result: '問診結果をコピーする',
           btn_restart_check: '最初からやり直す',
+          sub_atlas_2d: '2D解剖・経絡図',
+          sub_atlas_3d: '3D解剖（Startup.glb）',
           meridian_filter_label: '十四経脈フィルター',
           btn_all_meridians: '全経脈表示',
           view_front: '前面',
@@ -1206,6 +1334,17 @@
           layer_meridian: '経絡線',
           layer_acupoint: 'ツボ',
           atlas_hint: 'ツボの点をタップすると、下のカードに取穴部位とセルフケアが表示されます',
+          glb_title: 'Z-Anatomy 3Dビューア（Startup.glb）',
+          glb_desc: 'GitHubの同じフォルダに配置した Startup.glb を読み込むか、手元の .glb / .gltf ファイルを選択・ドロップして3D表示できます。',
+          btn_load_server_glb: '同階層の Startup.glb を読込',
+          btn_pick_glb: '手元の .glb を選択',
+          glb_status_idle: '待機中：上のボタンから読み込むか、下のビューアへ .glb をドロップしてください。',
+          glb_empty_title: '3Dモデル未読み込み',
+          glb_empty_desc: '「Startup.glb を読込」または「手元の .glb を選択」を押してください',
+          glb_cam_reset: '視点リセット',
+          glb_hide_part: '選択パーツを隠す',
+          glb_restore_parts: 'すべて戻す',
+          glb_part_placeholder: 'ドラッグで回転・スクロールで拡大縮小。モデル上のパーツをタップすると名称がここに表示されます。',
           tongue_title: '舌診セルフチェック（カメラ・写真解析）',
           tongue_desc: '自然光や明るい室内で舌を自然に突き出し、枠内に合わせて撮影または画像を選択してください。',
           btn_start_cam: 'カメラを起動',
@@ -1225,11 +1364,11 @@
         },
         en: {
           tab_check: 'Assessment',
-          tab_acupoint: '2D Anatomy',
+          tab_acupoint: 'Anatomy',
           tab_tongue: 'Tongue Check',
           tab_dict: 'Atlas & 5E',
           badge_check: '18-Q Assessment',
-          badge_acupoint: '2D Anatomy Atlas',
+          badge_acupoint: '2D / 3D Anatomy',
           badge_tongue: 'Tongue Camera',
           badge_dict: 'Acupoints & 5E',
           hero_eyebrow: 'East Asian Medicine Self-Care Guide',
@@ -1269,6 +1408,8 @@
           copy_toast: 'Assessment summary copied to clipboard',
           btn_copy_result: 'Copy Assessment Result',
           btn_restart_check: 'Start Over',
+          sub_atlas_2d: '2D Anatomy & Meridians',
+          sub_atlas_3d: '3D Viewer (Startup.glb)',
           meridian_filter_label: '14 Meridians Filter',
           btn_all_meridians: 'Show All',
           view_front: 'Front',
@@ -1279,6 +1420,17 @@
           layer_meridian: 'Meridians',
           layer_acupoint: 'Points',
           atlas_hint: 'Tap any glowing acupoint to inspect location and self-care tips below',
+          glb_title: 'Z-Anatomy 3D Viewer (Startup.glb)',
+          glb_desc: 'Load Startup.glb hosted in the same folder on GitHub, or select/drop a local .glb / .gltf file to inspect in 3D.',
+          btn_load_server_glb: 'Load ./Startup.glb',
+          btn_pick_glb: 'Choose Local .glb',
+          glb_status_idle: 'Ready: click a button above or drag & drop a .glb file onto the viewer.',
+          glb_empty_title: 'No 3D Model Loaded',
+          glb_empty_desc: 'Click "Load ./Startup.glb" or "Choose Local .glb" above',
+          glb_cam_reset: 'Reset View',
+          glb_hide_part: 'Hide Selected',
+          glb_restore_parts: 'Restore All',
+          glb_part_placeholder: 'Drag to rotate, scroll to zoom. Tap any anatomical part to inspect its name here.',
           tongue_title: 'Tongue Self-Check (Camera / Photo)',
           tongue_desc: 'In natural or bright indoor light, gently extend your tongue inside the oval guide to capture or upload a photo.',
           btn_start_cam: 'Start Camera',
@@ -1315,7 +1467,6 @@
         CV: { key: 'CV', name: '任脈', nameEn: 'Conception Vessel (CV)', short: '任脈', shortEn: 'CV', color: '#5EEAD4', organ: '陰経総任' }
       };
 
-      // 2D SVG座標（viewBox 0 0 260 520 基準）
       const ACUPOINTS = [
         { id: 'LU9', code: 'LU9', name: '太淵（たいえん）', nameEn: 'Taiyuan (LU9)', meridian: 'LU', view: 'front', x: 56, y: 242, mirror: true, location: '手首の横ジワの親指側、脈が触れるくぼみ', locationEn: 'Radial end of the wrist crease, at the radial pulse depression', indication: '呼吸の疲れ、咳・のどの違和感、手首の張り', indicationEn: 'Respiratory fatigue, cough, throat discomfort, wrist tension', massage: '反対側の親指でゆっくり5秒押して離すのを5回繰り返します。', massageEn: 'Press gently with the opposite thumb for 5 seconds, repeat 5 times.' },
         { id: 'LI4', code: 'LI4', name: '合谷（ごうこく）', nameEn: 'Hegu (LI4)', meridian: 'LI', view: 'front', x: 46, y: 264, mirror: true, location: '手の甲側、親指と人差し指の骨が合流するくぼみ', locationEn: 'On the dorsum of the hand, between the 1st and 2nd metacarpal bones', indication: '肩こり、頭の重さ、ストレスによる張り、顔の疲れ', indicationEn: 'Shoulder tension, headache, stress, facial fatigue', massage: '人差し指の骨側へ向けてじんわり押圧します。', massageEn: 'Press steadily toward the index finger bone.' },
@@ -1606,6 +1757,9 @@
 
         if (tabName === 'acupoint') {
           render2DAtlas();
+          if (!document.getElementById('panel-atlas-3d').classList.contains('hidden')) {
+            resizeGlbViewer();
+          }
         }
         updateHeaderBadge();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1930,6 +2084,22 @@
         jumpToPointOn2D(targetPt);
       });
 
+      // ==================== 2D / 3D サブモード切替 ====================
+      function switchAtlasSubMode(mode) {
+        const is2D = mode === '2d';
+        document.getElementById('submode-atlas-2d').classList.toggle('active', is2D);
+        document.getElementById('submode-atlas-3d').classList.toggle('active', !is2D);
+        document.getElementById('panel-atlas-2d').classList.toggle('hidden', !is2D);
+        document.getElementById('panel-atlas-3d').classList.toggle('hidden', is2D);
+        if (!is2D) {
+          initGlb3DOnce();
+          resizeGlbViewer();
+        }
+      }
+
+      document.getElementById('submode-atlas-2d').addEventListener('click', () => switchAtlasSubMode('2d'));
+      document.getElementById('submode-atlas-3d').addEventListener('click', () => switchAtlasSubMode('3d'));
+
       // ==================== 高精細2D解剖・経絡・ツボSVGアトラス ====================
       function selectAcupoint(pt) {
         if (!pt) return;
@@ -1952,6 +2122,7 @@
         updateViewButtons();
         renderMeridianPills();
         switchMainTab('acupoint');
+        switchAtlasSubMode('2d');
         selectAcupoint(pt);
       }
 
@@ -2045,45 +2216,35 @@
           C 105 35, 114 22, 130 22 Z
         `;
 
-        // 筋肉レイヤー（前面：胸鎖乳突筋・大胸筋・三角筋・腹直筋・大腿四頭筋／背面：僧帽筋・広背筋・大臀筋・ハムストリング・腓腹筋）
         const muscleSvg = atlasLayers.muscle ? (isFront ? `
           <g opacity="0.34" fill="#FB7185" stroke="#FDA4AF" stroke-width="0.9">
             <path d="M 122 80 L 128 104 L 116 102 Z" />
             <path d="M 138 80 L 132 104 L 144 102 Z" />
-            <!-- 大胸筋 -->
             <path d="M 128 112 C 112 110, 96 116, 94 134 C 98 148, 118 148, 128 140 Z" />
             <path d="M 132 112 C 148 110, 164 116, 166 134 C 162 148, 142 148, 132 140 Z" />
-            <!-- 三角筋 -->
             <path d="M 92 106 C 78 112, 72 132, 78 148 C 86 144, 92 128, 94 114 Z" />
             <path d="M 168 106 C 182 112, 188 132, 182 148 C 174 144, 168 128, 166 114 Z" />
-            <!-- 腹直筋 -->
             <rect x="115" y="152" width="13" height="22" rx="5" />
             <rect x="132" y="152" width="13" height="22" rx="5" />
             <rect x="116" y="178" width="12" height="22" rx="5" />
             <rect x="132" y="178" width="12" height="22" rx="5" />
             <rect x="118" y="204" width="10" height="26" rx="5" />
             <rect x="132" y="204" width="10" height="26" rx="5" />
-            <!-- 大腿四頭筋 -->
             <path d="M 96 268 C 92 302, 95 344, 108 358 C 118 344, 122 302, 118 268 Z" />
             <path d="M 164 268 C 168 302, 165 344, 152 358 C 142 344, 138 302, 142 268 Z" />
           </g>
         ` : `
           <g opacity="0.34" fill="#FB7185" stroke="#FDA4AF" stroke-width="0.9">
-            <!-- 僧帽筋 -->
             <path d="M 130 78 L 96 106 L 130 164 L 164 106 Z" />
-            <!-- 広背筋 -->
             <path d="M 94 134 C 98 164, 110 194, 126 206 L 126 160 Z" />
             <path d="M 166 134 C 162 164, 150 194, 134 206 L 134 160 Z" />
-            <!-- 大臀筋 -->
             <path d="M 94 232 C 92 262, 108 278, 128 270 L 128 232 Z" />
             <path d="M 166 232 C 168 262, 152 278, 132 270 L 132 232 Z" />
-            <!-- 腓腹筋 -->
             <path d="M 98 378 C 92 404, 96 428, 108 438 C 116 424, 118 400, 114 378 Z" />
             <path d="M 162 378 C 168 404, 164 428, 152 438 C 144 424, 142 400, 146 378 Z" />
           </g>
         `) : '';
 
-        // 骨格レイヤー
         const skeletonSvg = atlasLayers.skeleton ? `
           <g opacity="0.46" stroke="#F1F5F9" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <ellipse cx="130" cy="48" rx="16" ry="20" stroke-width="1.6" />
@@ -2114,7 +2275,6 @@
           </g>
         ` : '';
 
-        // 五臓レイヤー
         const organSvg = atlasLayers.organ ? (isFront ? `
           <g opacity="0.62">
             <path d="M 124 114 C 106 114, 96 134, 98 158 C 100 166, 114 166, 124 158 Z" fill="#38BDF8" />
@@ -2131,7 +2291,6 @@
           </g>
         `) : '';
 
-        // 経絡ラインレイヤー
         let meridianSvg = '';
         if (atlasLayers.meridian) {
           const paths = MERIDIAN_PATHS_2D.filter((p) => p.view === atlasView);
@@ -2146,7 +2305,6 @@
           }).join('') + `</g>`;
         }
 
-        // ツボポイントレイヤー
         let pointsSvg = '';
         if (atlasLayers.acupoint) {
           const pts = ACUPOINTS.filter((pt) => pt.view === atlasView && (!activeMeridianFilter || pt.meridian === activeMeridianFilter));
@@ -2233,6 +2391,249 @@
           chip.classList.toggle('active', atlasLayers[layer]);
           render2DAtlas();
         });
+      });
+
+      // ==================== 3D Startup.glb ビューア ====================
+      let glb3DInitialized = false;
+      let gScene, gCamera, gRenderer, gModelGroup = null, gSelectedMesh = null;
+      let gYaw = 0, gPitch = 0.08, gDist = 2.8;
+      const gHiddenMeshes = [];
+
+      function resizeGlbViewer() {
+        if (!gRenderer || !gCamera) return;
+        const stage = document.getElementById('glb-viewer-stage');
+        if (!stage) return;
+        const w = stage.clientWidth || 460;
+        const h = stage.clientHeight || 410;
+        gCamera.aspect = w / h;
+        gCamera.updateProjectionMatrix();
+        gRenderer.setSize(w, h);
+      }
+
+      function initGlb3DOnce() {
+        if (glb3DInitialized) return;
+        const statusEl = document.getElementById('glb-status-text');
+        if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader !== 'function') {
+          statusEl.textContent = currentLang === 'ja'
+            ? '3Dライブラリ（Three.js）が読み込めませんでした。ネットワーク接続を確認してください。'
+            : 'Three.js failed to load. Please check your internet connection.';
+          return;
+        }
+        glb3DInitialized = true;
+
+        const stage = document.getElementById('glb-viewer-stage');
+        const w = stage.clientWidth || 460;
+        const h = stage.clientHeight || 410;
+
+        gScene = new THREE.Scene();
+        gCamera = new THREE.PerspectiveCamera(44, w / h, 0.02, 200);
+        gRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        gRenderer.setSize(w, h);
+        gRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        stage.insertBefore(gRenderer.domElement, stage.firstChild);
+
+        const amb = new THREE.AmbientLight(0xffffff, 0.95);
+        const dir1 = new THREE.DirectionalLight(0xffffff, 0.95);
+        dir1.position.set(3, 5, 4);
+        const dir2 = new THREE.DirectionalLight(0xbae6fd, 0.45);
+        dir2.position.set(-4, -2, -3);
+        gScene.add(amb, dir1, dir2);
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let dragging = false, moved = 0, px = 0, py = 0;
+
+        stage.addEventListener('pointerdown', (e) => {
+          if (e.target.closest('button')) return;
+          dragging = true; moved = 0; px = e.clientX; py = e.clientY;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          const dx = e.clientX - px, dy = e.clientY - py;
+          moved += Math.hypot(dx, dy);
+          gYaw += dx * 0.012;
+          gPitch = Math.max(-1.25, Math.min(1.25, gPitch + dy * 0.01));
+          px = e.clientX; py = e.clientY;
+        });
+
+        window.addEventListener('pointerup', (e) => {
+          if (!dragging) return;
+          dragging = false;
+          if (moved < 6 && gModelGroup) {
+            const rect = gRenderer.domElement.getBoundingClientRect();
+            pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(pointer, gCamera);
+            const meshes = [];
+            gModelGroup.traverse((obj) => { if (obj.isMesh && obj.visible) meshes.push(obj); });
+            const hits = raycaster.intersectObjects(meshes, false);
+            if (hits.length > 0) {
+              gSelectedMesh = hits[0].object;
+              const name = gSelectedMesh.name || (currentLang === 'ja' ? '名称なしパーツ' : 'Unnamed Part');
+              document.getElementById('glb-part-info').textContent = currentLang === 'ja'
+                ? `選択パーツ: ${name}`
+                : `Selected Part: ${name}`;
+            }
+          }
+        });
+
+        stage.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          gDist = Math.max(0.9, Math.min(7.5, gDist + e.deltaY * 0.002));
+        }, { passive: false });
+
+        window.addEventListener('resize', resizeGlbViewer);
+
+        function animateGlb() {
+          requestAnimationFrame(animateGlb);
+          gCamera.position.x = gDist * Math.sin(gYaw) * Math.cos(gPitch);
+          gCamera.position.y = gDist * Math.sin(gPitch);
+          gCamera.position.z = gDist * Math.cos(gYaw) * Math.cos(gPitch);
+          gCamera.lookAt(0, 0, 0);
+          gRenderer.render(gScene, gCamera);
+        }
+        animateGlb();
+      }
+
+      function createConfiguredGLTFLoader() {
+        const loader = new THREE.GLTFLoader();
+        if (typeof THREE.DRACOLoader === 'function') {
+          const dracoLoader = new THREE.DRACOLoader();
+          dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
+          loader.setDRACOLoader(dracoLoader);
+        }
+        return loader;
+      }
+
+      function mountLoadedGltf(gltf, sourceLabel) {
+        if (gModelGroup) gScene.remove(gModelGroup);
+        gModelGroup = gltf.scene;
+
+        const box = new THREE.Box3().setFromObject(gModelGroup);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z) || 1;
+        const scale = 1.9 / maxDim;
+
+        gModelGroup.scale.setScalar(scale);
+        gModelGroup.position.sub(center.multiplyScalar(scale));
+        gScene.add(gModelGroup);
+
+        let meshCount = 0;
+        gModelGroup.traverse((obj) => { if (obj.isMesh) meshCount++; });
+
+        gYaw = 0; gPitch = 0.08; gDist = 2.8;
+        gHiddenMeshes.length = 0;
+        gSelectedMesh = null;
+
+        document.getElementById('glb-overlay-msg').classList.add('hidden');
+        document.getElementById('glb-status-text').textContent = currentLang === 'ja'
+          ? `読み込み完了: ${sourceLabel}（メッシュ数: ${meshCount}）`
+          : `Loaded: ${sourceLabel} (${meshCount} meshes)`;
+      }
+
+      function loadGlbFromArrayBuffer(buffer, fileName) {
+        initGlb3DOnce();
+        if (!glb3DInitialized) return;
+        const statusEl = document.getElementById('glb-status-text');
+        statusEl.textContent = currentLang === 'ja'
+          ? `${fileName} を解析・Draco解凍中...（大きいファイルは数秒〜数十秒かかります）`
+          : `Parsing & decoding ${fileName}... (large models may take a moment)`;
+
+        const loader = createConfiguredGLTFLoader();
+        loader.parse(
+          buffer,
+          '',
+          (gltf) => mountLoadedGltf(gltf, fileName),
+          (err) => {
+            statusEl.textContent = currentLang === 'ja'
+              ? `読み込みエラー: ${err && err.message ? err.message : 'ファイル形式またはメモリ上限を確認してください'}`
+              : `Load error: ${err && err.message ? err.message : 'Check file format or device memory'}`;
+          }
+        );
+      }
+
+      function loadServerStartupGlb() {
+        initGlb3DOnce();
+        if (!glb3DInitialized) return;
+        const statusEl = document.getElementById('glb-status-text');
+        statusEl.textContent = currentLang === 'ja'
+          ? './Startup.glb をサーバーから取得中...'
+          : 'Fetching ./Startup.glb from server...';
+
+        const loader = createConfiguredGLTFLoader();
+        loader.load(
+          './Startup.glb',
+          (gltf) => mountLoadedGltf(gltf, 'Startup.glb'),
+          (xhr) => {
+            if (xhr && xhr.total > 0) {
+              const pct = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
+              statusEl.textContent = currentLang === 'ja'
+                ? `Startup.glb ダウンロード中... ${pct}%`
+                : `Downloading Startup.glb... ${pct}%`;
+            }
+          },
+          () => {
+            statusEl.textContent = currentLang === 'ja'
+              ? '同階層の ./Startup.glb が見つかりません。GitHubにアップロードするか「手元の .glb を選択」から開いてください。'
+              : './Startup.glb not found in the same folder. Upload it to GitHub or use "Choose Local .glb".';
+          }
+        );
+      }
+
+      document.getElementById('btn-load-server-glb').addEventListener('click', loadServerStartupGlb);
+
+      document.getElementById('glb-file-input').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => loadGlbFromArrayBuffer(ev.target.result, file.name);
+        reader.readAsArrayBuffer(file);
+        e.target.value = '';
+      });
+
+      const glbStageEl = document.getElementById('glb-viewer-stage');
+      glbStageEl.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        glbStageEl.classList.add('drag-over');
+      });
+      glbStageEl.addEventListener('dragleave', () => glbStageEl.classList.remove('drag-over'));
+      glbStageEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        glbStageEl.classList.remove('drag-over');
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => loadGlbFromArrayBuffer(ev.target.result, file.name);
+        reader.readAsArrayBuffer(file);
+      });
+
+      document.getElementById('btn-glb-zoom-in').addEventListener('click', () => {
+        gDist = Math.max(0.9, gDist - 0.35);
+      });
+      document.getElementById('btn-glb-zoom-out').addEventListener('click', () => {
+        gDist = Math.min(7.5, gDist + 0.35);
+      });
+      document.getElementById('btn-glb-cam-reset').addEventListener('click', () => {
+        gYaw = 0; gPitch = 0.08; gDist = 2.8;
+      });
+      document.getElementById('btn-glb-hide-part').addEventListener('click', () => {
+        if (!gSelectedMesh) return;
+        gSelectedMesh.visible = false;
+        gHiddenMeshes.push(gSelectedMesh);
+        const hiddenName = gSelectedMesh.name || 'Part';
+        gSelectedMesh = null;
+        document.getElementById('glb-part-info').textContent = currentLang === 'ja'
+          ? `「${hiddenName}」を非表示にしました（非表示中: ${gHiddenMeshes.length}件）`
+          : `Hidden "${hiddenName}" (${gHiddenMeshes.length} hidden)`;
+      });
+      document.getElementById('btn-glb-restore-parts').addEventListener('click', () => {
+        gHiddenMeshes.forEach((m) => { m.visible = true; });
+        gHiddenMeshes.length = 0;
+        document.getElementById('glb-part-info').textContent = currentLang === 'ja'
+          ? '非表示パーツをすべて表示に戻しました。'
+          : 'All hidden parts restored.';
       });
 
       // ==================== 舌診カメラ ====================
